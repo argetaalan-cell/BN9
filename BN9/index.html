@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo Banorte - UX Completa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --rojo: #eb0029;
+            --rojo-suave: #fff1f2;
+            --gris-oscuro: #44515a;
+            --gris-claro: #f4f6f8;
+            --gris-medio: #cbd3d8;
+            --gris-texto: #666666;
+            --naranja: #ff6b00;
+            --amarillo: #f5c358;
+            --blanco: #ffffff;
+            
+            --bg-app: var(--gris-claro);
+            --shadow-float: 0 10px 25px rgba(0,0,0,0.15);
+            --shadow-card: 0 4px 12px rgba(0,0,0,0.05);
+            --radius-xl: 32px;
+            --radius-lg: 20px; 
+            --radius-md: 12px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: #e0e0e0;
+            display: flex; justify-content: center;
+            color: var(--gris-oscuro);
+        }
+
+        /* Contenedor principal que simula el teléfono */
+        .app-container {
+            width: 100%; max-width: 414px; height: 896px;
+            background-color: var(--bg-app);
+            position: relative; overflow-x: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column;
+        }
+
+        /* ---------------- ANIMACIONES GLOBALES ---------------- */
+        .ripple-target {
+            position: relative; overflow: hidden; transform: scale(1);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        .ripple-target:active { transform: scale(0.95); opacity: 0.9; }
+        
+        .ripple {
+            position: absolute; border-radius: 50%; transform: scale(0);
+            animation: ripple-anim 0.6s linear forwards; background-color: rgba(0, 0, 0, 0.08); pointer-events: none;
+        }
+        @keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+        @keyframes slideUpFade { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        @keyframes slideLeft { 
+            from { opacity: 0; transform: translateX(30px); } 
+            to { opacity: 1; transform: translateX(0); } 
+        }
+        .stagger-1 { animation: slideUpFade 0.4s ease-out 0.1s forwards; opacity: 0; }
+        .stagger-2 { animation: slideUpFade 0.4s ease-out 0.2s forwards; opacity: 0; }
+        .stagger-3 { animation: slideUpFade 0.4s ease-out 0.3s forwards; opacity: 0; }
+        .stagger-4 { animation: slideUpFade 0.4s ease-out 0.4s forwards; opacity: 0; }
+        .stagger-5 { animation: slideUpFade 0.4s ease-out 0.5s forwards; opacity: 0; }
+
+        .screen { 
+            flex: 1; overflow-y: auto; padding-bottom: 150px; display: flex; flex-direction: column; 
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform-origin: top center;
+        }
+        .screen.fade-out { opacity: 0; transform: scale(0.98); pointer-events: none; }
+        .screen.fade-in { animation: slideUpFade 0.4s ease-out forwards; }
+
+        .hidden { display: none !important; }
+        .flex { display: flex; align-items: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .bold { font-weight: 700; }
+        
+        .main-header {
+            padding: 15px; text-align: center; position: sticky; top: 0; z-index: 10;
+            background: var(--blanco);
+            border-bottom: 1px solid #e0e4e7;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+        .main-header.header-red { background: #c8102e; border-bottom: none; }
+        .main-header.header-red h1 { color: white; }
+        
+        .logged-header { background: var(--rojo); color: white; padding: 20px; text-align: center; }
+        .back-btn { position: absolute; left: 15px; font-size: 24px; color: var(--gris-oscuro); display: flex; align-items: center; justify-content: center; cursor:pointer;}
+        .main-header.transparent-hdr { background: transparent; border: none; }
+
+        .card { 
+            background: var(--blanco); 
+            border-radius: var(--radius-lg); padding: 20px; margin: 0 16px 16px 16px; 
+            box-shadow: var(--shadow-card); border: 1px solid rgba(0,0,0,0.05); 
+        }
+        
+        .icon-circle { 
+            width: 48px; height: 48px; border-radius: 50%; 
+            background: var(--blanco); color: var(--gris-oscuro); 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 24px; transition: transform 0.2s; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+        }
+        
+        .btn-primary { background: var(--gris-oscuro); color: var(--blanco); padding: 18px; border-radius: var(--radius-md); font-weight: 700; font-size: 16px; text-align: center; border: none; width: 100%; box-shadow: var(--shadow-card); cursor:pointer;}
+
+        .top-tabs {
+            display: flex; overflow-x: auto; 
+            background: #c8102e; 
+            border-bottom: none;
+            scrollbar-width: none;
+        }
+        .top-tabs::-webkit-scrollbar { display: none; }
+        
+        .tab-btn { flex: 1; min-width: 85px; padding: 12px 5px; text-align: center; font-size: 11px; color: rgba(255,255,255,0.7); font-weight: bold; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s;}
+        .tab-btn.active { border-bottom-color: var(--blanco); color: var(--blanco); }
+        .tab-btn .icon { font-size: 22px; display: block; margin-bottom: 6px; color: rgba(255,255,255,0.7); transition: color 0.3s; }
+        .tab-btn.active .icon { color: var(--blanco); }
+
+        .glow-icon {
+            filter: drop-shadow(0 0 10px rgba(235, 0, 41, 0.6));
+            animation: pulse-glow 2s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { filter: drop-shadow(0 0 8px rgba(235, 0, 41, 0.4)); transform: scale(1); }
+            to { filter: drop-shadow(0 0 18px rgba(235, 0, 41, 0.9)); transform: scale(1.05); }
+        }
+
+        /* Estructura para inputs alineados */
+        .input-container-flex {
+            display: flex; align-items: center; border-bottom: 3px solid var(--gris-medio); margin-bottom: 40px; transition: border-color 0.3s;
+        }
+        .input-container-flex:focus-within {
+            border-color: var(--rojo);
+        }
+        .input-container-flex-blue:focus-within {
+            border-color: #3b82f6;
+        }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 10px 0; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%; background: var(--rojo); cursor: pointer; margin-top: -10px; box-shadow: 0 4px 8px rgba(235, 0, 41, 0.3); border: 4px solid white; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: var(--gris-medio); border-radius: 10px; }
+
+        .form-input { width: 100%; padding: 18px; background: var(--blanco); border: 1px solid #ccc; border-radius: var(--radius-md); font-size: 16px; font-family: 'Outfit'; font-weight: 500; margin-bottom: 16px; outline: none; transition: border-color 0.3s; color:var(--gris-oscuro); }
+        .form-input:focus { border-color: var(--rojo); }
+        .progress-bar-bg { width:100%; background:var(--gris-claro); height:8px; border-radius:4px; overflow:hidden; border: 1px solid #e0e4e7; }
+        .progress-fill { height:100%; background:var(--rojo); transition: width 1s cubic-bezier(0.25, 0.8, 0.25, 1); }
+
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 16px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .list-item { 
+            background: var(--blanco); padding: 16px; margin: 0 16px 10px 16px; border-radius: var(--radius-md); 
+            display: flex; align-items: center; box-shadow: var(--shadow-card); 
+            border: 1px solid rgba(0,0,0,0.05); cursor:pointer;
+        }
+
+        .tab-content:not(.hidden) { animation: slideUpFade 0.3s ease-out forwards; }
+        .full-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-app); z-index: 60; display: flex; flex-direction: column; overflow-y: auto;}
+        .full-screen:not(.hidden) { animation: slideLeft 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+
+        .overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .overlay.show { opacity: 1; pointer-events: auto; }
+        .bottom-sheet { background: var(--bg-app); height: 85%; border-radius: 24px 24px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -10px 30px rgba(0,0,0,0.2); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1); position: relative; }
+        .overlay.show .bottom-sheet { transform: translateY(0); }
+        .sheet-drag { width: 40px; height: 5px; background: var(--gris-medio); border-radius: 5px; margin: 15px auto; }
+        
+        .close-overlay-btn {
+            position: absolute; top: 15px; right: 20px; width: 32px; height: 32px;
+            background: var(--gris-claro); color: var(--gris-oscuro); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+            cursor: pointer; z-index: 10; transition: background 0.2s;
+        }
+        .close-overlay-btn:active { background: var(--gris-medio); }
+
+        .chart-container {
+            display: flex; align-items: flex-end; justify-content: space-between;
+            height: 120px; padding: 20px 10px 0 10px; border-bottom: 2px solid var(--gris-claro);
+            margin-bottom: 16px;
+        }
+        .chart-bar {
+            width: 14%; background: var(--rojo); border-radius: 4px 4px 0 0;
+            transition: height 1.5s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative;
+        }
+        .chart-bar span {
+            position: absolute; top: -20px; width: 100%; text-align: center;
+            font-size: 10px; font-weight: 700; color: var(--gris-texto);
+        }
+
+        .wizard-step { padding: 30px 24px; flex: 1; display: flex; flex-direction: column; animation: slideLeft 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+        .wizard-title { font-size: 26px; font-weight: 900; color: var(--gris-oscuro); margin: 0 0 10px 0; line-height: 1.2; }
+        .wizard-subtitle { font-size: 15px; color: var(--gris-texto); margin: 0 0 32px 0; line-height: 1.5; font-weight: 400; }
+        .option-card {
+            background: var(--blanco); border: 2px solid transparent; border-radius: 20px;
+            padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 16px;
+        }
+        .option-card:hover, .option-card:active { border-color: var(--rojo); transform: translateY(-2px); box-shadow: 0 10px 25px rgba(235, 0, 41, 0.15); }
+        .wizard-input-clean {
+            width: 100%; font-size: 40px; font-weight: 900; color: var(--gris-oscuro);
+            border: none; border-bottom: 3px solid var(--gris-medio); padding: 15px 0; margin-bottom: 40px;
+            background: transparent; outline: none; transition: border-color 0.3s; font-family: 'Outfit';
+        }
+        .wizard-input-clean:focus { border-color: var(--rojo); }
+        .wizard-input-clean::placeholder { color: var(--gris-medio); }
+        .wizard-label { font-size: 13px; font-weight: 800; color: var(--gris-texto); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; display: block; }
+        .progress-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gris-medio); transition: all 0.3s; }
+        .dot.active { background: var(--rojo); width: 24px; border-radius: 10px; }
+
+        .status-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 7px 20px 5px; font-size: 11px; font-weight: 800;
+            background: var(--blanco); color: var(--gris-oscuro); flex-shrink: 0;
+        }
+        .status-bar.dark { background: var(--rojo); color: rgba(255,255,255,0.9); }
+        .status-right { display: flex; align-items: center; gap: 6px; }
+
+        .badge-wrap { position: relative; display: inline-flex; }
+        .badge {
+            position: absolute; top: -4px; right: -4px;
+            background: var(--rojo); color: white; font-size: 9px; font-weight: 900;
+            min-width: 16px; height: 16px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; border: 2px solid white;
+        }
+        .badge.on-dark { border-color: var(--rojo); }
+
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        .shimmer-amount {
+            background: linear-gradient(90deg, var(--gris-oscuro) 25%, #8fa0ad 50%, var(--gris-oscuro) 75%);
+            background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3.5s linear infinite;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.6); opacity: 0.55; }
+        }
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #10b981;
+            display: inline-block; animation: pulseDot 1.8s ease-in-out infinite; flex-shrink: 0;
+        }
+
+        .invest-action-bar {
+            padding: 16px; background: var(--blanco);
+            border-top: 1px solid var(--gris-claro);
+            display: flex; gap: 10px; position: sticky; bottom: 0;
+        }
+        .btn-outline-red {
+            flex: 1; border: 2px solid var(--rojo); color: var(--rojo);
+            background: transparent; padding: 14px; border-radius: var(--radius-md);
+            font-weight: 700; font-size: 14px; cursor: pointer; font-family: 'Outfit'; transition: all 0.18s;
+        }
+        .btn-outline-red:active { background: var(--rojo-suave); }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .full-screen:not(.hidden) { animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+
+        .back-btn-pill {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 13px; font-weight: 700; color: var(--gris-oscuro);
+            cursor: pointer; padding: 6px 12px 6px 8px; border-radius: 20px;
+            background: var(--gris-claro); transition: background 0.15s;
+            position: absolute; left: 12px; white-space: nowrap;
+        }
+        .back-btn-pill:active { background: var(--gris-medio); }
+        .back-btn-pill i { font-size: 18px; }
+
+        .login-hero { position: relative; overflow: hidden; }
+        .login-hero::before {
+            content: ''; position: absolute; top: -50%; left: -30%;
+            width: 200%; height: 200%; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 55%);
+            pointer-events: none;
+        }
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.06); }
+        }
+        .float-anim { animation: floatIcon 3s ease-in-out infinite; }
+        
+        .menu-action-btn {
+            background: var(--blanco);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin: 0 16px 16px 16px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .menu-action-btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .menu-action-btn .btn-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .menu-action-btn .btn-icon {
+            width: 56px; height: 56px; border-radius: 12px;
+            background: var(--rojo-suave); color: var(--rojo);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px;
+        }
+        .menu-action-btn .btn-text {
+            font-size: 18px; font-weight: 800; color: var(--gris-oscuro);
+        }
+        .menu-action-btn .ph-caret-right {
+            font-size: 20px; color: var(--gris-medio);
+        }
+
+        .pulse-blue-btn {
+            background: linear-gradient(135deg, #2563eb, #1e3a8a) !important;
+            border: none !important;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4) !important;
+            animation: bluePulse 2.5s infinite;
+            color: white !important;
+        }
+        @keyframes bluePulse {
+            0% { box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); }
+            50% { box-shadow: 0 8px 25px rgba(37, 99, 235, 0.6); }
+            100% { box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); }
+        }
+
+        /* Estilos para los logos de fondo a la derecha */
+        .maya-footer-logo {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: auto;
+            opacity: 0.15; /* Efecto marca de agua */
+            pointer-events: none;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container" id="app">
+
+    <div id="screen-public" class="screen" style="background-color: var(--bg-app); background-image: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(244,246,248,0.1) 250px, var(--bg-app) 450px), url('bnn2.jpg'); background-size: 100% auto; background-repeat: no-repeat; background-position: top center;">
+        
+        <div class="status-bar" style="background: transparent; color: white; position: absolute; top: 0; left: 0; right: 0; z-index: 20;">
+            <span style="font-size:12px; font-weight:900;">9:41</span>
+            <div class="status-right">
+                <i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i>
+                <i class="ph-fill ph-wifi-high" style="font-size:14px;"></i>
+                <i class="ph-fill ph-battery-full" style="font-size:14px;"></i>
+            </div>
+        </div>
+        
+        <div class="main-header" style="background: transparent; border-bottom: none; height: 120px; padding: 0;">
+            <img src="bnn1.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="Banner Superior"/>
+        </div>
+        
+        <div class="flex-between stagger-1" style="padding: 0 20px; margin: 12px 0;">
+            <div class="badge-wrap ripple-target" style="cursor:pointer;" onclick="showFullScreen('screen-notificaciones')">
+                <div style="width:48px; height:48px; background:white; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-card);">
+                    <i class="ph-fill ph-bell" style="font-size:24px; color:var(--rojo);"></i>
+                </div>
+                <span class="badge" style="top:-4px; right:-4px;">9+</span>
+            </div>
+            <div class="ripple-target" style="cursor:pointer;" onclick="showFullScreen('screen-indicadores')">
+                <div style="width:48px; height:48px; background:white; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-card);">
+                    <i class="ph-bold ph-chart-line-up" style="font-size:24px; color:var(--gris-oscuro);"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="ripple-target stagger-2 login-hero" style="flex-shrink:0; margin: 0 16px 14px 16px; border-radius: var(--radius-lg); padding: 26px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: var(--shadow-float); position:relative; background: linear-gradient(135deg, #ff6b00 0%, #eb0029 50%, #c90024 100%); background-size: 300% 300%; animation: slideUpFade 0.4s ease-out 0.2s forwards, gradientShift 6s ease 0.6s infinite; opacity:0;" onclick="simulateLoad('screen-dashboard', 'tab-cuentas')">
+            <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.22); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);" class="float-anim">
+                <i class="ph-bold ph-fingerprint" style="font-size: 34px; color: white;"></i>
+            </div>
+            <h2 style="font-size: 26px; font-weight: 900; color: white; margin: 0 0 4px 0; text-shadow: 0 2px 8px rgba(0,0,0,0.15);">Entrar</h2>
+            <p style="font-size: 13px; color: white; opacity: 0.92; margin: 0 0 14px 0; font-weight: 500;">Banca Móvil Segura</p>
+            <div style="display:flex; gap:14px; align-items:center;">
+                <div style="background:rgba(255,255,255,0.18); border-radius:30px; padding:7px 16px; display:flex; align-items:center; gap:7px;">
+                    <i class="ph-fill ph-lock-key" style="font-size:15px; color:white;"></i>
+                    <span style="font-size:12px; color:white; font-weight:700;">NIP</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.18); border-radius:30px; padding:7px 16px; display:flex; align-items:center; gap:7px;">
+                    <i class="ph-fill ph-face-id" style="font-size:15px; color:white;"></i>
+                    <span style="font-size:12px; color:white; font-weight:700;">Face ID</span>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="stagger-3" style="flex-shrink:0; padding: 0 20px; margin: 10px 0 10px 0; font-size: 17px; font-weight: 800;">Accesos Rápidos</h3>
+        <div class="grid-3 stagger-3" style="flex-shrink:0;">
+            <div class="card ripple-target" style="margin:0; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="simulateLoad('screen-dashboard', 'tab-cuentas')">
+                <div class="icon-circle" style="background:#e8e8e8; box-shadow:none; border:none;"><i class="ph-bold ph-user" style="color:#555;"></i></div>
+                <span style="font-size:11px; font-weight:700; text-align:center; line-height:1.3;">Mis cuentas</span>
+            </div>
+            <div class="card ripple-target" style="margin:0; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="simulateLoad('screen-dashboard', 'tab-transferir')">
+                <div class="icon-circle" style="background:#44515a; box-shadow:none; border:none; color:white;"><i class="ph-bold ph-arrows-left-right"></i></div>
+                <span style="font-size:11px; font-weight:700; text-align:center; line-height:1.3;">Transferir o pagar</span>
+            </div>
+            <div class="card ripple-target" style="margin:0; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="simulateLoad('screen-dashboard', 'tab-cuentas')">
+                <div class="icon-circle" style="background:#44515a; box-shadow:none; border:none; color:white;"><i class="ph-bold ph-money"></i></div>
+                <span style="font-size:11px; font-weight:700; text-align:center; line-height:1.3;">Retirar dinero</span>
+            </div>
+            <div class="card ripple-target" style="margin:0; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="simulateLoad('screen-dashboard', 'tab-cuentas')">
+                <div class="icon-circle" style="background:#e8e8e8; box-shadow:none; border:none;"><i class="ph-bold ph-cards" style="color:#555;"></i></div>
+                <span style="font-size:11px; font-weight:700; text-align:center; line-height:1.3;">Tarjeta Digital</span>
+            </div>
+            <div class="card ripple-target" style="margin:0; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="simulateLoad('screen-dashboard', 'tab-cuentas')">
+                <div class="icon-circle" style="background:#44515a; box-shadow:none; border:none; color:white;"><i class="ph-bold ph-key"></i></div>
+                <span style="font-size:11px; font-weight:700; text-align:center; line-height:1.3;">Token Celular</span>
+            </div>
+            <div class="card ripple-target" style="margin:0; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="showFullScreen('screen-nomina')">
+                <div class="icon-circle" style="background:var(--naranja); box-shadow:none; border:none; color:white;"><i class="ph-bold ph-bank"></i></div>
+                <span style="font-size:11px; font-weight:700; text-align:center; line-height:1.3;">Trae tu Nómina</span>
+            </div>
+        </div>
+
+        <div class="card stagger-4" style="margin: 14px 16px 0 16px; padding:16px 16px 0 16px; background: var(--blanco);">
+            <h3 style="margin: 0 0 12px 0; font-size: 17px; font-weight:800; color: var(--gris-oscuro);">Centro de ayuda</h3>
+            <div style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:16px;">
+                <div class="ripple-target" style="flex-shrink:0; width:80px; background:#eb0029; border-radius:12px; padding:12px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+                    <i class="ph-fill ph-chat-circle-text" style="font-size:22px; color:white;"></i>
+                    <span style="font-size:10px; color:white; font-weight:700; text-align:center; line-height:1.3;">Agente virtual</span>
+                </div>
+                <div class="ripple-target" style="flex-shrink:0; width:80px; background:#ff8c00; border-radius:12px; padding:12px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+                    <i class="ph-fill ph-phone" style="font-size:22px; color:white;"></i>
+                    <span style="font-size:10px; color:white; font-weight:700; text-align:center; line-height:1.3;">Llamada</span>
+                </div>
+                <div class="ripple-target" style="flex-shrink:0; width:80px; background:#f5c358; border-radius:12px; padding:12px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+                    <i class="ph-fill ph-device-mobile" style="font-size:22px; color:white;"></i>
+                    <span style="font-size:10px; color:white; font-weight:700; text-align:center; line-height:1.3;">Conoce Banorte Móvil</span>
+                </div>
+                <div class="ripple-target" style="flex-shrink:0; width:80px; background:#22c55e; border-radius:12px; padding:12px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+                    <i class="ph-fill ph-envelope" style="font-size:22px; color:white;"></i>
+                    <span style="font-size:10px; color:white; font-weight:700; text-align:center; line-height:1.3;">Correo</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card stagger-4" style="margin: 10px 16px 0 16px; padding:16px; background: var(--blanco);">
+            <div style="display:flex; justify-content:space-around; padding:4px 0 8px 0;">
+                <div style="text-align:center; cursor:pointer;">
+                    <div style="width:56px; height:56px; background:#1a1a2e; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto;">
+                        <span style="color:white; font-weight:900; font-size:11px; letter-spacing:-0.5px;">CoDi<sup style="font-size:8px;">®</sup></span>
+                    </div>
+                    <span style="font-size:11px; font-weight:700;">CoDi®</span>
+                </div>
+                <div style="text-align:center; cursor:pointer;">
+                    <div style="width:56px; height:56px; background:#1a1a2e; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto;">
+                        <span style="color:white; font-weight:900; font-size:13px; font-style:italic;">Dimo</span>
+                    </div>
+                    <span style="font-size:11px; font-weight:700;">Dimo®</span>
+                </div>
+                <div style="text-align:center; cursor:pointer;">
+                    <div style="width:56px; height:56px; background:#ff8c00; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto;">
+                        <i class="ph-fill ph-warning-circle" style="color:white; font-size:26px;"></i>
+                    </div>
+                    <span style="font-size:11px; font-weight:700;">Asistencia</span>
+                </div>
+                <div style="text-align:center; cursor:pointer;">
+                    <div style="width:56px; height:56px; background:#44515a; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto;">
+                        <i class="ph-bold ph-device-mobile" style="color:white; font-size:22px;"></i>
+                        <i class="ph-bold ph-plus" style="color:white; font-size:13px; margin-left:-4px;"></i>
+                    </div>
+                    <span style="font-size:11px; font-weight:700;">Más Apps</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card stagger-4" style="margin: 10px 16px 20px 16px; padding:0; overflow:hidden; background:var(--blanco);">
+            <div style="padding:16px 16px 0 16px;">
+                <h3 style="margin:0 0 4px 0; font-size:17px; font-weight:800;">Ubícanos</h3>
+                <p style="margin:0 0 8px 0; font-size:13px; color:var(--gris-texto);">Encuentra cerca de ti:</p>
+                <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px;"><span style="width:10px;height:10px;border-radius:50%;background:#eb0029;display:inline-block;"></span> ATMs</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px;"><span style="width:10px;height:10px;border-radius:50%;background:#ff8c00;display:inline-block;"></span> Corresponsales</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px;"><span style="width:10px;height:10px;border-radius:50%;background:#44515a;display:inline-block;"></span> Sucursales</div>
+                </div>
+            </div>
+            <div style="background:#dce8e0; height:80px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
+                <div style="position:absolute; inset:0; background:linear-gradient(135deg,#c8ddc0,#b8cbb0); opacity:0.7;"></div>
+                <i class="ph-fill ph-map-trifold" style="font-size:40px; color:#7a9a7a; position:relative; z-index:1;"></i>
+            </div>
+            <div style="padding:12px 16px 16px 16px; display:flex; flex-direction:column; gap:8px;">
+                <button class="ripple-target" style="background:#44515a; color:white; border:none; border-radius:10px; padding:13px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Outfit'; width:100%;">Mostrar qué hay a mi alrededor</button>
+                <button class="ripple-target" style="background:#e8e8e8; color:#44515a; border:none; border-radius:10px; padding:13px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Outfit'; width:100%;">Cita en sucursal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-dashboard" class="screen hidden">
+        <div class="status-bar dark">
+            <span style="font-size:12px; font-weight:900;">9:41</span>
+            <div class="status-right">
+                <i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i>
+                <i class="ph-fill ph-wifi-high" style="font-size:14px;"></i>
+                <i class="ph-fill ph-battery-full" style="font-size:14px;"></i>
+            </div>
+        </div>
+        <div class="logged-header flex-between stagger-1" style="position:relative; padding:12px 16px;">
+            <div class="flex" style="gap:10px; align-items:center;">
+                <div class="badge-wrap ripple-target" style="cursor:pointer;" onclick="openOverlay('overlay-profile')">
+                    <div class="icon-circle" style="width:40px; height:40px; background:rgba(255,255,255,0.2); color:white; border:none; box-shadow:none; flex-shrink:0;">
+                        <i class="ph-bold ph-user"></i>
+                    </div>
+                </div>
+                <div style="text-align:left;">
+                    <h1 style="margin:0; font-size: 18px; font-weight: 900; color:white;">Hola Alejandro</h1>
+                    <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+                        <span class="pulse-dot"></span>
+                        <span style="font-size: 11px; font-weight:500; opacity:0.85; color:white;">Último ingreso: 15-04-2026 13:40:14 Vía Móvil</span>
+                    </div>
+                </div>
+            </div>
+            <div class="badge-wrap ripple-target" style="cursor:pointer;" onclick="toggleOverlay('overlay-notificaciones')">
+                <div class="icon-circle" style="width:40px; height:40px; background:rgba(255,255,255,0.2); color:white; border:none; box-shadow:none;">
+                    <i class="ph-bold ph-bell"></i>
+                </div>
+                <span class="badge on-dark" style="border-color:var(--rojo);">9+</span>
+            </div>
+        </div>
+
+        <div class="top-tabs">
+            <div class="tab-btn active" data-target="tab-cuentas" onclick="switchTab('tab-cuentas')"><i class="ph-bold ph-credit-card icon"></i>Mis<br>cuentas</div>
+            <div class="tab-btn" data-target="tab-inversiones" onclick="switchTab('tab-inversiones')"><i class="ph-bold ph-trend-up icon"></i>Mis<br>inversiones</div>
+            <div class="tab-btn" data-target="tab-pagos" onclick="switchTab('tab-pagos')"><i class="ph-bold ph-receipt icon"></i>Pago de<br>servicios</div>
+            <div class="tab-btn" data-target="tab-transferir" onclick="switchTab('tab-transferir')"><i class="ph-bold ph-arrows-left-right icon"></i>Transferir</div>
+            <div class="tab-btn" onclick="showFullScreen('screen-nomina')"><i class="ph-bold ph-bank icon"></i>Trae tu<br>nómina</div>
+        </div>
+
+        <div id="tabs-container">
+            
+            <div id="tab-cuentas" class="tab-content">
+                <div class="card ripple-target stagger-1" style="background: linear-gradient(135deg, #ff6b00, #eb0029); color: white; border:none; margin-top:16px;">
+                    <div class="flex-between">
+                        <div>
+                            <div class="bold" style="font-size:22px;">Alejandro</div>
+                            <div style="font-size:14px; margin-top:4px; opacity:0.9;">Conoce las promociones que tenemos para ti.</div>
+                            <button style="background:white; color:var(--gris-oscuro); border:none; padding:6px 16px; border-radius:20px; font-weight:700; margin-top:12px;">Ver ofertas</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-between stagger-2" style="padding: 0 20px; margin-bottom: 12px;">
+                    <h2 style="margin:0; font-size: 20px; font-weight:900; color:var(--gris-oscuro);">Mis cuentas</h2>
+                    <i class="ph-fill ph-gear" style="font-size:24px; color:var(--gris-texto);"></i>
+                </div>
+                <div class="list-item ripple-target stagger-2" style="margin-bottom:8px;">
+                    <div class="icon-circle" style="background:var(--gris-claro); color:var(--gris-oscuro); border:none; box-shadow:none; flex-shrink:0;">
+                        <i class="ph-bold ph-credit-card"></i>
+                    </div>
+                    <div style="flex:1; margin-left:14px;">
+                        <div style="font-size:11px; font-weight:800; color:var(--gris-texto); text-transform:uppercase; letter-spacing:0.8px;">CUENTA ENLACE PERSONAL</div>
+                        <div style="font-size:13px; color:var(--gris-texto); margin-top:2px;">****3934</div>
+                        <div class="bold shimmer-amount" style="font-size:19px; margin-top:5px;">$ 21,538.05 MN</div>
+                    </div>
+                    <i class="ph-bold ph-caret-right" style="font-size:20px; color:var(--gris-medio);"></i>
+                </div>
+
+                <div class="list-item ripple-target stagger-3" style="background:#ff8c00; border:none; border-radius:14px; margin-bottom:8px;">
+                    <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="ph-fill ph-credit-card" style="color:white;font-size:20px;"></i>
+                    </div>
+                    <div style="flex:1;margin-left:14px;">
+                        <div class="bold" style="color:white;font-size:15px;">Beneficios de mis tarjetas</div>
+                        <div style="color:rgba(255,255,255,0.85);font-size:12px;margin-top:2px;">Promociones, puntos y más...</div>
+                    </div>
+                    <i class="ph-bold ph-caret-right" style="color:white;font-size:18px;"></i>
+                </div>
+
+                <div class="list-item ripple-target stagger-4" style="background:#ff8c00; border:none; border-radius:14px; margin-bottom:8px;" onclick="showFullScreen('screen-nomina')">
+                    <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="ph-fill ph-currency-dollar" style="color:white;font-size:20px;"></i>
+                    </div>
+                    <div style="flex:1;margin-left:14px;">
+                        <div class="bold" style="color:white;font-size:15px;">Contrata aquí</div>
+                        <div style="color:rgba(255,255,255,0.85);font-size:12px;margin-top:2px;">Tarjeta de Crédito, Pagarés y más</div>
+                    </div>
+                    <i class="ph-bold ph-caret-right" style="color:white;font-size:18px;"></i>
+                </div>
+            </div>
+
+            <div id="tab-transferir" class="tab-content hidden">
+                <h2 class="stagger-1" style="padding: 15px 20px 0 20px; margin:0; font-size: 24px; font-weight:900;">Transferir</h2>
+                <div class="stagger-2" style="display: flex; margin: 16px; background: var(--blanco); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-card); border: 1px solid #e0e4e7;">
+                    <div style="flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: bold; background: var(--blanco); color: var(--rojo); border-bottom: 3px solid var(--rojo);">A otros</div>
+                    <div class="ripple-target" style="flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: bold; color: var(--gris-texto); background: #f8f9fa;" onclick="openOverlay('modal-cuentas-propias')">A mis cuentas</div>
+                </div>
+                <div class="stagger-3" style="padding: 0 16px;">
+                    <div class="form-input flex ripple-target" style="gap:12px; color:var(--gris-texto);">
+                        <i class="ph-bold ph-magnifying-glass" style="font-size:20px;"></i> Buscar cuenta o clabe...
+                    </div>
+                    <h3 style="margin: 20px 0 16px 0; font-size: 14px; color:var(--gris-texto); text-transform:uppercase; letter-spacing:1px;">Favoritos Recientes</h3>
+                </div>
+                <div class="list-item ripple-target stagger-4">
+                    <div class="icon-circle" style="background: var(--gris-claro); border:none; box-shadow:none;">SR</div>
+                    <div style="flex:1; margin-left:16px;"><div class="bold" style="font-size:16px;">Sofía Reyes</div><div style="font-size:13px; color:var(--gris-texto); margin-top:2px;">Santander •••• 1234</div></div>
+                    <button style="background:var(--rojo-suave); color:var(--rojo); border:none; padding:8px 16px; border-radius:20px; font-weight:700; cursor:pointer;">Enviar</button>
+                </div>
+
+                <div class="list-item ripple-target stagger-5">
+                    <div class="icon-circle" style="background: var(--gris-claro); border:none; box-shadow:none; font-size:13px; font-weight:800;">MS</div>
+                    <div style="flex:1; margin-left:16px;"><div class="bold" style="font-size:16px;">Miguel Sánchez</div><div style="font-size:13px; color:var(--gris-texto); margin-top:2px;">BBVA •••• 5678</div></div>
+                    <button style="background:var(--rojo-suave); color:var(--rojo); border:none; padding:8px 16px; border-radius:20px; font-weight:700; cursor:pointer;">Enviar</button>
+                </div>
+
+                <div style="padding: 0 16px; margin-top:20px;">
+                    <button class="btn-primary ripple-target animated-gradient" style="border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; gap:10px; padding:16px;" onclick="switchTab('tab-transferir')">
+                        <i class="ph-bold ph-paper-plane-tilt" style="font-size:20px;"></i>
+                        Realizar nueva transferencia
+                    </button>
+                </div>
+            </div>
+
+            <div id="tab-pagos" class="tab-content hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 15px 20px 8px 20px;">
+                    <h2 class="stagger-1" style="margin:0; font-size: 22px; font-weight:900;">Servicios e impuestos</h2>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 20px 10px 20px;">
+                    <h3 class="stagger-2" style="margin:0; font-size:15px; font-weight:800; color:var(--gris-oscuro);">Categorías</h3>
+                    <i class="ph-bold ph-magnifying-glass" style="font-size:22px; color:var(--gris-texto); cursor:pointer;"></i>
+                </div>
+                <div class="grid-3 stagger-2">
+                    <div class="card ripple-target" style="margin:0; padding:18px 8px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <i class="ph-fill ph-buildings" style="font-size:30px; color:#b22222;"></i>
+                        <span style="font-size:11px; font-weight:700; line-height:1.3;">Impuestos del Gobierno de CDMX</span>
+                    </div>
+                    <div class="card ripple-target" style="margin:0; padding:18px 8px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <i class="ph-fill ph-drop" style="font-size:30px; color:var(--gris-oscuro);"></i>
+                        <span style="font-size:11px; font-weight:700; line-height:1.3;">Agua, luz, gas</span>
+                    </div>
+                    <div class="card ripple-target" style="margin:0; padding:18px 8px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <i class="ph-fill ph-graduation-cap" style="font-size:30px; color:var(--gris-oscuro);"></i>
+                        <span style="font-size:11px; font-weight:700; line-height:1.3;">Escuelas y universidades</span>
+                    </div>
+                </div>
+                <div class="list-item ripple-target stagger-3" style="margin-top:12px;">
+                    <div class="icon-circle" style="background:var(--gris-claro); color:var(--gris-oscuro); border:none; box-shadow:none;">
+                        <i class="ph-bold ph-file-text"></i>
+                    </div>
+                    <div style="flex:1; margin-left:16px;"><div class="bold" style="font-size:15px;">Servicios domiciliados</div></div>
+                    <i class="ph-bold ph-caret-right" style="font-size:18px; color:var(--gris-medio);"></i>
+                </div>
+                <h3 class="stagger-4" style="padding: 0 20px; margin: 20px 0 12px 0; font-size: 15px; font-weight:800; color:var(--gris-oscuro);">Mis pagos frecuentes</h3>
+                <div class="list-item ripple-target stagger-4">
+                    <div class="icon-circle" style="background:var(--gris-claro); color:var(--gris-oscuro); border:none; box-shadow:none;">
+                        <i class="ph-bold ph-file-text"></i>
+                    </div>
+                    <div style="flex:1; margin-left:16px;"><div class="bold" style="font-size:15px;">AMAZON PRIME VIDEO</div></div>
+                    <i class="ph-bold ph-caret-right" style="font-size:18px; color:var(--gris-medio);"></i>
+                </div>
+                <div class="list-item ripple-target stagger-5">
+                    <div class="icon-circle" style="background:var(--amarillo); color:white; border:none; box-shadow:none; font-size:12px; font-weight:900; letter-spacing:-0.5px;">AMZ</div>
+                    <div style="flex:1; margin-left:16px;"><div class="bold" style="font-size:15px;">AMAZON COMPRAS</div></div>
+                    <i class="ph-bold ph-caret-right" style="font-size:18px; color:var(--gris-medio);"></i>
+                </div>
+            </div>
+
+            <div id="tab-inversiones" class="tab-content hidden">
+                <div class="flex stagger-1" style="padding: 15px 20px 0 20px; align-items: center; gap: 12px;">
+                    <span class="back-btn-pill ripple-target" style="position:static; padding:4px 10px;" onclick="switchTab('tab-cuentas')">
+                        <i class="ph-bold ph-arrow-left"></i>
+                    </span>
+                    <h2 style="margin:0; font-size: 24px; font-weight:900;">Inversiones</h2>
+                </div>
+
+                <div class="card ripple-target stagger-2" style="background: var(--gris-oscuro); color: white; border: none; margin-top:20px; padding:0; overflow:hidden;" onclick="handleMayaClick()">
+                    <div class="flex" style="gap:0;">
+                        <img src="bnn3.png" id="banner-maya-icon" alt="Maya" style="width: 100px; height: 100px; object-fit: contain; padding: 15px; flex-shrink:0;">
+                        <div style="flex:1; padding:16px 16px 16px 0;">
+                            <div class="flex" style="gap: 8px; margin-bottom: 6px; align-items:center;">
+                                <span id="banner-maya-tag" style="font-size: 10px; font-weight: 900; color: var(--rojo); text-transform: uppercase; letter-spacing: 1px;">NUEVO</span>
+                            </div>
+                            <h3 style="margin: 0 0 4px 0; font-size: 19px; font-weight: 900; color:white;">Inversión Maya</h3>
+                            <p id="banner-maya-desc" style="margin: 0; font-size: 12px; opacity: 0.85; line-height: 1.4;">Autopilot Financiero 24/7</p>
+                        </div>
+                        <div class="flex" style="padding:16px; align-items:center; color:rgba(255,255,255,0.4);"><i class="ph-bold ph-caret-right"></i></div>
+                    </div>
+                </div>
+
+                <div id="investment-main-menu" class="stagger-3">
+                    <div class="menu-action-btn ripple-target" onclick="toggleRiskSelection()">
+                        <div class="btn-content">
+                            <div class="btn-icon" style="background: var(--rojo-suave); color: var(--rojo);"><i class="ph-bold ph-arrows-left-right"></i></div>
+                            <div class="btn-text">Inversiones</div>
+                        </div>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                    
+                    <div class="menu-action-btn ripple-target" onclick="showFullScreen('screen-inv-notas')">
+                        <div class="btn-content">
+                            <div class="btn-icon" style="background: #e0f2fe; color: #0284c7;"><i class="ph-bold ph-currency-circle-dollar"></i></div>
+                            <div class="btn-text">Notas Estructuradas</div>
+                        </div>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                </div>
+
+                <div id="risk-selection-in-tab" class="hidden" style="animation: slideUpFade 0.3s ease-out forwards;">
+                    <div class="flex-between" style="padding: 0 20px; margin: 20px 0 16px 0;">
+                        <h3 style="margin:0; font-size: 16px; font-weight: 800;">Opciones de Inversión</h3>
+                        <span class="back-btn-pill ripple-target" style="position:static; padding: 4px 10px;" onclick="toggleRiskSelection()">
+                            <i class="ph-bold ph-caret-left"></i> Volver
+                        </span>
+                    </div>
+                    
+                    <div class="list-item ripple-target pulse-blue-btn" style="margin-bottom: 10px; border-left: none;" onclick="showFullScreen('screen-inv-notas')">
+                        <div class="icon-circle" style="background: rgba(255,255,255,0.2); color: white; border:none; box-shadow:none;"><i class="ph-fill ph-chart-polar"></i></div>
+                        <div style="flex:1; margin-left: 16px;">
+                            <div class="flex" style="gap: 6px;"><div style="width:8px; height:8px; border-radius:50%; background:white;"></div> <span style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.9); letter-spacing:1px;">NUEVO</span></div>
+                            <div class="bold" style="font-size:16px; margin-top:4px; color:white;">Notas Estructuradas</div>
+                            <div style="font-size:12px; color:rgba(255,255,255,0.85); margin-top:2px;">Rendimiento superior, capital protegido</div>
+                        </div>
+                        <div class="bold" style="font-size:18px; color:white;"><i class="ph-bold ph-caret-right"></i></div>
+                    </div>
+
+                    <div class="list-item ripple-target" style="border-left: 5px solid #10b981;" onclick="showFullScreen('screen-inv-pagare')">
+                        <div class="icon-circle" style="background: #ecfdf5; color: #10b981; border:none; box-shadow:none;"><i class="ph-fill ph-piggy-bank"></i></div>
+                        <div style="flex:1; margin-left: 16px;">
+                            <div class="flex" style="gap: 6px;"><div style="width:8px; height:8px; border-radius:50%; background:#10b981;"></div> <span style="font-size:10px; font-weight:800; color:var(--gris-texto); letter-spacing:1px;">TASA FIJA</span></div>
+                            <div class="bold" style="font-size:16px; margin-top:4px;">Pagaré</div>
+                            <div style="font-size:12px; color:var(--gris-texto); margin-top:2px;">Haz crecer tu dinero de forma segura</div>
+                        </div>
+                        <div class="bold" style="font-size:18px; color:#10b981;"><i class="ph-bold ph-caret-right"></i></div>
+                    </div>
+
+                    <div class="list-item ripple-target" style="border-left: 5px solid #f59e0b;" onclick="showFullScreen('screen-inv-fondos')">
+                        <div class="icon-circle" style="background: #fffbeb; color: #f59e0b; border:none; box-shadow:none;"><i class="ph-fill ph-chart-pie-slice"></i></div>
+                        <div style="flex:1; margin-left: 16px;">
+                            <div class="flex" style="gap: 6px;"><div style="width:8px; height:8px; border-radius:50%; background:#f59e0b;"></div> <span style="font-size:10px; font-weight:800; color:var(--gris-texto); letter-spacing:1px;">DIVERSIFICADO</span></div>
+                            <div class="bold" style="font-size:16px; margin-top:4px;">Fondos de Inversión</div>
+                            <div style="font-size:12px; color:var(--gris-texto); margin-top:2px;">Portafolios creados por expertos</div>
+                        </div>
+                        <div class="bold" style="font-size:18px; color:#f59e0b;"><i class="ph-bold ph-caret-right"></i></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div onclick="toggleOverlay('overlay-menu')" style="position:fixed; bottom:0; width:100%; max-width:414px; z-index:20; background:var(--gris-oscuro); color:white; text-align:center; padding:14px; font-size:16px; font-weight:700; cursor:pointer; box-shadow:0 -3px 10px rgba(0,0,0,0.15); letter-spacing:0.5px;">
+            <i class="ph-bold ph-caret-up" style="font-size:14px; margin-right:6px; vertical-align:middle;"></i> Menú
+        </div>
+        
+        <div id="maya-floating" class="ripple-target flex hidden" style="position:fixed; bottom: 56px; left: 12px; z-index:40; align-items: center; gap:8px;" onclick="handleMayaClick()">
+            <div style="width:42px; height:42px; border-radius:50%; box-shadow: var(--shadow-float); margin:0; background:var(--rojo); color:white; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:900; letter-spacing:-0.5px; flex-shrink:0; border:2px solid white;">
+                Maya
+            </div>
+            <div style="background: var(--gris-oscuro); color: white; padding: 7px 12px; border-radius: 18px; font-size: 12px; font-weight:700; box-shadow: var(--shadow-card);">
+                ¡Chatea conmigo!
+            </div>
+        </div>
+    </div>
+
+
+    <div id="overlay-menu" class="overlay hidden">
+        <div class="bottom-sheet" style="height: 90%; background:var(--blanco);">
+            <div class="sheet-drag"></div>
+            <div class="close-overlay-btn" onclick="closeOverlay('overlay-menu')"><i class="ph-bold ph-x"></i></div>
+            
+            <div style="padding: 10px 20px 20px 20px; text-align:center;">
+                <h1 style="margin:0; font-size: 24px; font-weight: 900; color: var(--gris-oscuro);">Menú</h1>
+            </div>
+            <div style="padding: 0 20px 20px 20px; text-align: center; border-bottom: 1px solid #eee;">
+                <div class="bold" style="color:var(--gris-oscuro); font-size:18px;">Alejandro Ruiz Pérez</div>
+                <div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Número de Cliente: 92837465</div>
+            </div>
+            <div style="padding: 24px; overflow-y: auto; flex: 1; background:var(--bg-app);">
+                <h3 class="text-center stagger-1" style="color:var(--gris-oscuro); margin-bottom:24px; font-size:16px;">Más servicios</h3>
+                <div class="grid-3 stagger-2" style="gap:20px 12px; margin-bottom: 30px;">
+                    <div class="ripple-target" style="text-align:center;" onclick="switchTab('tab-cuentas')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-user"></i></div><span style="font-size:12px; font-weight:700;">Cuentas</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="switchTab('tab-transferir')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-arrows-left-right"></i></div><span style="font-size:12px; font-weight:700;">Transferir</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="switchTab('tab-cuentas')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-money"></i></div><span style="font-size:12px; font-weight:700;">Retiros</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-device-mobile"></i></div><span style="font-size:12px; font-weight:700;">Tiempo aire</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="openOverlay('modal-nomina')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-bank"></i></div><span style="font-size:12px; font-weight:700;">Nómina</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-file-text"></i></div><span style="font-size:12px; font-weight:700;">Consultas</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-gear"></i></div><span style="font-size:12px; font-weight:700;">Ajustes</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto; background:black; color:white; border:none;"><i class="ph-bold ph-google-logo"></i></div><span style="font-size:12px; font-weight:700;">G-Pay</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-receipt"></i></div><span style="font-size:12px; font-weight:700;">Cheques</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-headset"></i></div><span style="font-size:12px; font-weight:700;">Ayuda</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-globe"></i></div><span style="font-size:12px; font-weight:700;">Remesas</span></div>
+                    <div class="ripple-target" style="text-align:center;" onclick="closeOverlay('overlay-menu')"><div class="icon-circle" style="margin:0 auto 8px auto;"><i class="ph-bold ph-map-pin"></i></div><span style="font-size:12px; font-weight:700;">Ubícanos</span></div>
+                </div>
+                <button class="btn-primary ripple-target" style="background:var(--rojo);" onclick="cerrarSesion()">Cerrar sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay-profile" class="overlay hidden">
+        <div class="bottom-sheet" style="height: 85%; background:var(--blanco);">
+            <div class="sheet-drag"></div>
+            <div class="close-overlay-btn" onclick="closeOverlay('overlay-profile')"><i class="ph-bold ph-x"></i></div>
+            
+            <div style="padding: 10px 20px 20px 20px; text-align:center; border-bottom:1px solid #eee;">
+                <div class="bold" style="font-size:18px;">Alejandro Ruiz Pérez</div>
+                <div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Número de Cliente: 92837465</div>
+            </div>
+            <div style="padding: 24px; overflow-y: auto; flex: 1; background:var(--bg-app);">
+                <h3 class="stagger-1" style="font-size:14px; color:var(--gris-texto); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">CUENTA</h3>
+                <div class="list-item ripple-target stagger-1" style="margin:0 0 10px 0;">
+                    <i class="ph ph-user" style="font-size:24px; color:var(--rojo);"></i>
+                    <span style="flex:1; margin-left:16px; font-size:15px; font-weight:600;">Datos personales</span>
+                    <i class="ph ph-caret-right" style="font-size:20px; color:var(--gris-medio);"></i>
+                </div>
+                <div class="list-item ripple-target stagger-1" style="margin:0 0 10px 0;">
+                    <i class="ph ph-shield-check" style="font-size:24px; color:var(--gris-oscuro);"></i>
+                    <span style="flex:1; margin-left:16px; font-size:15px; font-weight:600;">Seguridad y contraseña</span>
+                    <i class="ph ph-caret-right" style="font-size:20px; color:var(--gris-medio);"></i>
+                </div>
+                <div class="list-item ripple-target stagger-1" style="margin:0 0 24px 0;">
+                    <i class="ph ph-bell" style="font-size:24px; color:var(--amarillo);"></i>
+                    <span style="flex:1; margin-left:16px; font-size:15px; font-weight:600;">Notificaciones</span>
+                    <i class="ph ph-caret-right" style="font-size:20px; color:var(--gris-medio);"></i>
+                </div>
+                <h3 class="stagger-2" style="font-size:14px; color:var(--gris-texto); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">PREFERENCIAS</h3>
+                <div class="list-item ripple-target stagger-2" style="margin:0 0 10px 0;">
+                    <i class="ph ph-palette" style="font-size:24px; color:purple;"></i>
+                    <span style="flex:1; margin-left:16px; font-size:15px; font-weight:600;">Apariencia</span>
+                    <i class="ph ph-caret-right" style="font-size:20px; color:var(--gris-medio);"></i>
+                </div>
+                <div class="list-item ripple-target stagger-2" style="margin:0 0 10px 0;">
+                    <i class="ph ph-globe" style="font-size:24px; color:#3b82f6;"></i>
+                    <span style="flex:1; margin-left:16px; font-size:15px; font-weight:600;">Idioma</span>
+                    <i class="ph ph-caret-right" style="font-size:20px; color:var(--gris-medio);"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay-notificaciones" class="overlay hidden" style="justify-content: flex-end;">
+        <div class="bottom-sheet" style="height: 80%; background:var(--bg-app);">
+            <div class="sheet-drag"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 20px 16px 20px;">
+                <h2 style="font-size:22px; font-weight:900; margin:0;">Notificaciones</h2>
+                <i class="ph-bold ph-magnifying-glass" style="font-size:22px; color:var(--gris-oscuro); cursor:pointer;"></i>
+            </div>
+            <div style="display:flex; gap:0; padding:0 16px 16px 16px;">
+                <div style="flex:1; background:var(--gris-oscuro); color:white; padding:10px; text-align:center; border-radius:8px 0 0 8px; font-size:13px; font-weight:700; cursor:pointer;">Total</div>
+                <div style="flex:1; background:white; color:var(--gris-oscuro); padding:10px; text-align:center; border-radius:0 8px 8px 0; font-size:13px; font-weight:600; border:1px solid #ddd; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">Sin leer <i class="ph-fill ph-envelope" style="font-size:14px;"></i></div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 16px 12px 16px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:18px;height:18px;border:2px solid #ccc;border-radius:4px;"></div>
+                    <span style="font-size:13px; color:var(--gris-texto);">Seleccionar todo</span>
+                </div>
+                <i class="ph-bold ph-arrow-counter-clockwise" style="font-size:20px; color:var(--gris-oscuro); cursor:pointer;"></i>
+            </div>
+            <div style="overflow-y:auto; flex:1; padding:0 12px;">
+                <div class="list-item ripple-target" style="margin-bottom:8px; position:relative; border-radius:10px;">
+                    <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:8px;height:8px;border-radius:50%;background:var(--rojo);"></div>
+                    <div style="margin-left:20px; display:flex; align-items:center; gap:12px;">
+                        <i class="ph-fill ph-bell" style="font-size:28px; color:var(--gris-texto);"></i>
+                        <div style="flex:1;">
+                            <div class="bold" style="font-size:14px; color:var(--rojo);">Notificacion SPEI</div>
+                            <div style="font-size:12px; color:var(--gris-texto);">Se realizo un CARGO por COMP...</div>
+                        </div>
+                        <span style="font-size:11px; color:var(--gris-texto);">11/04</span>
+                    </div>
+                </div>
+                <div class="list-item ripple-target" style="margin-bottom:8px; position:relative; border-radius:10px;">
+                    <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:8px;height:8px;border-radius:50%;background:var(--rojo);"></div>
+                    <div style="margin-left:20px; display:flex; align-items:center; gap:12px;">
+                        <i class="ph-fill ph-bell" style="font-size:28px; color:var(--gris-texto);"></i>
+                        <div style="flex:1;">
+                            <div class="bold" style="font-size:14px; color:var(--rojo);">Notificacion SPEI</div>
+                            <div style="font-size:12px; color:var(--gris-texto);">Se realizo un CARGO por COMP...</div>
+                        </div>
+                        <span style="font-size:11px; color:var(--gris-texto);">11/04</span>
+                    </div>
+                </div>
+                <div class="list-item ripple-target" style="margin-bottom:8px; position:relative; border-radius:10px;">
+                    <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:8px;height:8px;border-radius:50%;background:var(--rojo);"></div>
+                    <div style="margin-left:20px; display:flex; align-items:center; gap:12px;">
+                        <i class="ph-fill ph-bell" style="font-size:28px; color:var(--gris-texto);"></i>
+                        <div style="flex:1;">
+                            <div class="bold" style="font-size:14px; color:var(--rojo);">Notificación de operación</div>
+                            <div style="font-size:12px; color:var(--gris-texto);">Ingresa el código 553556 para c...</div>
+                        </div>
+                        <span style="font-size:11px; color:var(--gris-texto);">09/04</span>
+                    </div>
+                </div>
+                <div class="list-item ripple-target" style="margin-bottom:8px; border-radius:10px;">
+                    <div style="margin-left:20px; display:flex; align-items:center; gap:12px;">
+                        <i class="ph-fill ph-bell" style="font-size:28px; color:var(--gris-texto);"></i>
+                        <div style="flex:1;">
+                            <div class="bold" style="font-size:14px; color:var(--rojo);">Notificacion SPEI</div>
+                            <div style="font-size:12px; color:var(--gris-texto);">Se realizo un CARGO por COMP...</div>
+                        </div>
+                        <span style="font-size:11px; color:var(--gris-texto);">08/04</span>
+                    </div>
+                </div>
+            </div>
+            <div style="padding:12px 16px; border-top:1px solid #eee; background:white; display:flex; justify-content:center;">
+                <span style="font-size:13px; color:var(--gris-texto); cursor:pointer;" onclick="closeOverlay('overlay-notificaciones')">Cerrar</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-cuentas-propias" class="overlay hidden" style="justify-content: center; align-items: center; padding: 24px; z-index:110;">
+        <div style="background:var(--blanco); border-radius:20px; padding:32px; text-align:center; width:100%; max-width:320px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <i class="ph-fill ph-warning-circle" style="font-size:50px; color:var(--rojo); margin-bottom:15px; display:block;"></i>
+            <h2 style="margin:0 0 10px 0; font-size:20px; font-weight:900;">Cuentas Propias</h2>
+            <p style="font-size:14px; color:var(--gris-texto); line-height:1.5;">No puedes realizar una transferencia porque no tienes más de una cuenta a tu nombre.</p>
+            <button class="btn-primary ripple-target" style="margin-top:20px;" onclick="closeOverlay('modal-cuentas-propias')">Entendido</button>
+        </div>
+    </div>
+
+    <div id="modal-nomina" class="overlay hidden" style="justify-content: center; align-items: center; padding: 20px; z-index:120;">
+        <div style="background:#f4f6f8; border-radius:24px; padding:30px 24px; text-align:center; width:100%; max-width:360px; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <div class="ripple-target" style="position:absolute; top:16px; right:16px; background:var(--gris-texto); color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; cursor:pointer;" onclick="closeOverlay('modal-nomina')">X</div>
+            <div class="icon-circle" style="width:75px; height:75px; margin:0 auto 20px auto; background:white; color:var(--gris-oscuro); font-size:36px; box-shadow:0 4px 10px rgba(0,0,0,0.05); border:none;">
+                <i class="ph-fill ph-bank"></i>
+            </div>
+            <h2 style="margin:0 0 10px 0; font-size:22px; font-weight:800; color:var(--gris-oscuro);">Trae tu nómina a Banorte</h2>
+            <div style="width:40px; height:3px; background:var(--amarillo); margin:0 auto 15px auto; border-radius:2px;"></div>
+            <div style="font-weight:700; font-size:16px; color:var(--gris-oscuro); margin-bottom:24px;">¡Conoce todos sus beneficios!</div>
+            <ul style="list-style:none; padding:0; text-align:left; font-size:14px; color:var(--gris-oscuro); margin-bottom:24px;">
+                <li style="display:flex; margin-bottom:14px; gap:10px;"><span style="color:var(--amarillo);">●</span> <span>Tarjeta de Crédito <b>SIN anualidad</b> de por vida.</span></li>
+                <li style="display:flex; margin-bottom:14px; gap:10px;"><span style="color:var(--amarillo);">●</span> <span><b>Crédito de Nómina</b> desde tu primer depósito.</span></li>
+                <li style="display:flex; margin-bottom:14px; gap:10px;"><span style="color:var(--amarillo);">●</span> <span><b>Adelanto de Nómina</b> hasta por $10,000 pesos.</span></li>
+                <li style="display:flex; margin-bottom:14px; gap:10px;"><span style="color:var(--amarillo);">●</span> <span><b>SIN comisiones</b> por manejo de cuenta ni saldo.</span></li>
+            </ul>
+            <button class="btn-primary ripple-target" style="background:var(--gris-oscuro); border-radius:12px; width:100%; padding:16px;" onclick="closeOverlay('modal-nomina'); showFullScreen('screen-nomina');">Traer mi Nómina</button>
+        </div>
+    </div>
+
+    <div id="screen-notificaciones" class="full-screen hidden" style="background:var(--bg-app); z-index:80; display:flex; flex-direction:column;">
+        <div class="status-bar dark"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="position:relative; background: #c8102e; color: white;">
+            <span class="back-btn-pill ripple-target" style="background:rgba(255,255,255,0.2); color:white;" onclick="closeFullScreen('screen-notificaciones')"><i class="ph-bold ph-arrow-left"></i></span>
+            <h1 style="color:white; font-size:18px; margin:0; font-weight:800; text-transform:none;">Notificaciones</h1>
+            <i class="ph-bold ph-magnifying-glass" style="font-size:22px; color:white; cursor:pointer;"></i>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:16px;">
+            <div style="display:flex; gap:0; margin-bottom:16px;">
+                <div style="flex:1; background:var(--gris-oscuro); color:white; padding:10px; text-align:center; border-radius:8px 0 0 8px; font-size:13px; font-weight:700; cursor:pointer;">Total</div>
+                <div style="flex:1; background:white; color:var(--gris-oscuro); padding:10px; text-align:center; border-radius:0 8px 8px 0; font-size:13px; font-weight:600; border:1px solid #ddd; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">Sin leer <i class="ph-fill ph-envelope" style="font-size:14px;"></i></div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:18px;height:18px;border:2px solid #ccc;border-radius:4px;"></div>
+                    <span style="font-size:13px; color:var(--gris-texto);">Seleccionar todo</span>
+                </div>
+                <i class="ph-bold ph-arrow-counter-clockwise" style="font-size:20px; color:var(--gris-oscuro); cursor:pointer;"></i>
+            </div>
+            <div class="list-item ripple-target" style="margin-bottom:8px; position:relative; border-radius:10px; padding:14px 14px 14px 28px;">
+                <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:8px;height:8px;border-radius:50%;background:var(--rojo);"></div>
+                <i class="ph-fill ph-bell" style="font-size:26px; color:#888; flex-shrink:0;"></i>
+                <div style="flex:1; margin-left:10px;">
+                    <div class="bold" style="font-size:14px; color:var(--rojo);">Notificacion SPEI</div>
+                    <div style="font-size:12px; color:var(--gris-texto);">Se realizo un CARGO por COMP...</div>
+                </div>
+                <span style="font-size:11px; color:var(--gris-texto); flex-shrink:0;">11/04</span>
+            </div>
+            <div class="list-item ripple-target" style="margin-bottom:8px; position:relative; border-radius:10px; padding:14px 14px 14px 28px;">
+                <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:8px;height:8px;border-radius:50%;background:var(--rojo);"></div>
+                <i class="ph-fill ph-bell" style="font-size:26px; color:#888; flex-shrink:0;"></i>
+                <div style="flex:1; margin-left:10px;">
+                    <div class="bold" style="font-size:14px; color:var(--rojo);">Notificacion SPEI</div>
+                    <div style="font-size:12px; color:var(--gris-texto);">Se realizo un CARGO por COMP...</div>
+                </div>
+                <span style="font-size:11px; color:var(--gris-texto); flex-shrink:0;">11/04</span>
+            </div>
+            <div class="list-item ripple-target" style="margin-bottom:8px; position:relative; border-radius:10px; padding:14px 14px 14px 28px;">
+                <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:8px;height:8px;border-radius:50%;background:var(--rojo);"></div>
+                <i class="ph-fill ph-bell" style="font-size:26px; color:#888; flex-shrink:0;"></i>
+                <div style="flex:1; margin-left:10px;">
+                    <div class="bold" style="font-size:14px; color:var(--rojo);">Notificación de operación</div>
+                    <div style="font-size:12px; color:var(--gris-texto);">Ingresa el código 553556 para c...</div>
+                </div>
+                <span style="font-size:11px; color:var(--gris-texto); flex-shrink:0;">09/04</span>
+            </div>
+            <div class="list-item ripple-target" style="margin-bottom:8px; border-radius:10px; padding:14px 14px 14px 28px;">
+                <i class="ph-fill ph-bell" style="font-size:26px; color:#888; flex-shrink:0;"></i>
+                <div style="flex:1; margin-left:10px;">
+                    <div class="bold" style="font-size:14px; color:var(--rojo);">Notificacion SPEI</div>
+                    <div style="font-size:12px; color:var(--gris-texto);">Se realizo un CARGO por COMP...</div>
+                </div>
+                <span style="font-size:11px; color:var(--gris-texto); flex-shrink:0;">08/04</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-indicadores" class="full-screen hidden" style="background:var(--bg-app); z-index:80; display:flex; flex-direction:column;">
+        <div class="status-bar dark"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="position:relative; background: #c8102e; color: white;">
+            <span class="back-btn-pill ripple-target" style="background:rgba(255,255,255,0.2); color:white;" onclick="closeFullScreen('screen-indicadores')"><i class="ph-bold ph-arrow-left"></i></span>
+            <h1 style="color:white; font-size:18px; margin:0; font-weight:800; text-transform:none;">Indicadores financieros</h1>
+            <div style="width:40px;"></div>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:16px 16px 40px 16px;">
+            <div style="background:white; border-radius:12px; overflow:hidden; margin-bottom:16px; box-shadow:var(--shadow-card);">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f0f0f0;">
+                            <th style="text-align:left; padding:14px 16px; font-size:14px; font-weight:800; color:var(--gris-oscuro);">Divisas</th>
+                            <th style="text-align:right; padding:14px 12px; font-size:14px; font-weight:800; color:var(--gris-oscuro);">Compra</th>
+                            <th style="text-align:right; padding:14px 16px; font-size:14px; font-weight:800; color:var(--gris-oscuro);">Venta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-top:1px solid #eee;">
+                            <td style="padding:16px 16px; font-size:14px; display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:20px;">🇺🇸</span> Dólar
+                            </td>
+                            <td style="padding:16px 12px; font-size:14px; font-weight:700; text-align:right;">$ 16.10</td>
+                            <td style="padding:16px 16px; font-size:14px; font-weight:700; text-align:right;">$ 17.70</td>
+                        </tr>
+                        <tr style="border-top:1px solid #eee;">
+                            <td style="padding:16px 16px; font-size:14px; display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:20px;">🇪🇺</span> Euro
+                            </td>
+                            <td style="padding:16px 12px; font-size:14px; font-weight:700; text-align:right;">$ 19.85</td>
+                            <td style="padding:16px 16px; font-size:14px; font-weight:700; text-align:right;">$ 21.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="background:white; border-radius:12px; overflow:hidden; margin-bottom:16px; box-shadow:var(--shadow-card);">
+                <div style="background:#44515a; padding:14px 16px;">
+                    <span style="color:white; font-size:15px; font-weight:800;">IPC</span>
+                </div>
+                <div style="padding:0 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #eee;">
+                        <span style="font-size:14px; color:var(--gris-texto);">Volumen</span>
+                        <span style="font-size:14px; font-weight:800;">69,825.94</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0;">
+                        <span style="font-size:14px; color:var(--gris-texto);">Variación</span>
+                        <span style="font-size:14px; font-weight:800;">730.91 (1.06%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:white; border-radius:12px; overflow:hidden; margin-bottom:16px; box-shadow:var(--shadow-card);">
+                <div style="background:#b0b8c1; padding:14px 16px;">
+                    <span style="color:white; font-size:15px; font-weight:800;">GFNORTE</span>
+                </div>
+                <div style="padding:0 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #eee;">
+                        <span style="font-size:14px; color:var(--gris-texto);">Último</span>
+                        <span style="font-size:14px; font-weight:800;">195.11</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #eee;">
+                        <span style="font-size:14px; color:var(--gris-texto);">Variación</span>
+                        <span style="font-size:14px; font-weight:800;">-1.89 (-0.96%)</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0;">
+                        <span style="font-size:14px; color:var(--gris-texto);">Apertura</span>
+                        <span style="font-size:14px; font-weight:800;">198.09</span>
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align:center; font-size:13px; color:var(--gris-texto); margin:0;">Al menos <strong>30 minutos</strong> de retraso.</p>
+        </div>
+    </div>
+
+    <div id="screen-nomina" class="full-screen hidden" style="background:var(--bg-app); z-index:80; display:flex; flex-direction:column;">
+        <div class="status-bar dark"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="position:relative; background: #c8102e; color: white;">
+            <span class="back-btn-pill ripple-target" style="background:rgba(255,255,255,0.2); color:white;" onclick="closeFullScreen('screen-nomina')"><i class="ph-bold ph-arrow-left"></i></span>
+            <h1 style="color:white; font-size:18px; margin:0; font-weight:800; text-transform:none;">Trae tu nómina</h1>
+            <div style="width:40px;"></div>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding-bottom:80px;">
+            <div style="display:flex; gap:0; padding:16px 16px 0 16px;">
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; cursor:pointer; opacity:0.6;">
+                    <i class="ph-fill ph-bank" style="font-size:24px; color:var(--gris-oscuro);"></i>
+                    <i class="ph-bold ph-clock" style="font-size:12px; color:var(--gris-oscuro); margin-top:-16px; margin-left:12px;"></i>
+                    <span style="font-size:11px; font-weight:600; text-align:center; color:var(--gris-texto);">Estatus de solicitudes</span>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; background:#e8e8e8; border-radius:10px; cursor:pointer;">
+                    <i class="ph-fill ph-bank" style="font-size:24px; color:var(--gris-oscuro);"></i>
+                    <i class="ph-bold ph-arrow-right" style="font-size:12px; color:var(--gris-oscuro); margin-top:-16px; margin-left:12px;"></i>
+                    <span style="font-size:11px; font-weight:700; text-align:center; color:var(--gris-oscuro);">Traer mi nómina</span>
+                </div>
+            </div>
+
+            <div style="padding:20px 16px 0 16px;">
+                <h2 style="font-size:18px; font-weight:800; margin:0 0 10px 0;">Nómina actual</h2>
+                <p style="font-size:13px; color:var(--gris-texto); margin:0 0 16px 0; line-height:1.5;">Ingrese el <strong>número de tarjeta</strong> o la cuenta <strong>CLABE</strong> donde recibes tu <strong>nómina actual.</strong></p>
+
+                <div style="background:white; border-radius:10px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow-card);">
+                    <div style="display:flex; align-items:center; gap:10px; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:8px;">
+                        <i class="ph-bold ph-credit-card" style="font-size:22px; color:var(--gris-texto);"></i>
+                        <input type="text" placeholder="Número tarjeta o CLABE" style="border:none; outline:none; font-size:14px; flex:1; font-family:'Outfit'; color:var(--gris-oscuro); background:transparent;" maxlength="18">
+                        <span style="font-size:12px; color:var(--gris-texto);" id="nomina-counter">0/18</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--gris-texto);">16 dígitos de la tarjeta<br>18 dígitos de CLABE</div>
+                </div>
+
+                <div style="background:white; border-radius:10px; padding:16px; margin-bottom:20px; box-shadow:var(--shadow-card);">
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i class="ph-fill ph-bank" style="font-size:22px; color:var(--gris-texto);"></i>
+                            <span style="font-size:14px; color:var(--gris-texto);">Nombre del banco</span>
+                        </div>
+                        <i class="ph-bold ph-caret-down" style="font-size:18px; color:var(--gris-oscuro);"></i>
+                    </div>
+                </div>
+
+                <div style="background:#f0f0f0; border-radius:10px; padding:14px 16px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
+                    <div style="width:24px; height:24px; background:var(--naranja); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
+                        <i class="ph-bold ph-info" style="font-size:13px; color:white;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:14px; font-weight:800; margin-bottom:4px;">Importante</div>
+                        <div style="font-size:13px; color:var(--gris-texto); line-height:1.5;">Tienes que haber recibido al menos un depósito en tu nómina actual.</div>
+                    </div>
+                </div>
+
+                <button class="ripple-target" style="width:100%; background:#d0d0d0; color:#888; border:none; border-radius:10px; padding:15px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Outfit';">Continuar</button>
+            </div>
+        </div>
+        <div style="position:absolute; bottom:0; left:0; right:0; background:#44515a; padding:14px; text-align:center; cursor:pointer;" onclick="closeFullScreen('screen-nomina')">
+            <span style="color:white; font-size:15px; font-weight:700;">Volver al menú</span>
+        </div>
+    </div>
+
+    <div id="screen-inv-notas" class="full-screen hidden" style="background:var(--bg-app); z-index:70;">
+        <div class="status-bar dark"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="position:relative; justify-content:center;">
+            <span class="back-btn-pill ripple-target" onclick="closeFullScreen('screen-inv-notas')"><i class="ph-bold ph-arrow-left"></i> Volver</span>
+            <h1 style="color:#2563eb; font-size:20px; margin:0;">Notas Estructuradas</h1>
+        </div>
+        <div style="padding: 24px; flex:1; overflow-y: auto;">
+            <div style="background:linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius:16px; padding:20px; margin-bottom:24px; display:flex; align-items:center; gap:14px; color:white; box-shadow: 0 8px 20px rgba(37,99,235,0.3);">
+                <div style="width:48px; height:48px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="ph-bold ph-currency-circle-dollar" style="font-size:24px; color:white;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:800; font-size:16px;">Notas Estructuradas</div>
+                    <div style="font-size:13px; opacity:0.9; margin-top:3px;">Invierte en instrumentos vinculados a índices bursátiles o tipo de cambio, asegurando siempre tu capital.</div>
+                </div>
+            </div>
+            
+            <div class="list-item ripple-target" style="padding:20px; margin-bottom:10px;">
+                <div class="icon-circle" style="background:#eff6ff; color:#3b82f6; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-shield-check"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Capital 100% Protegido</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">No pierdes tu inversión inicial al vencimiento.</div></div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px; margin-bottom:10px;">
+                <div class="icon-circle" style="background:#eff6ff; color:#3b82f6; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-trend-up"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Rendimiento Potencial</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Gana hasta un 18% anual si el mercado sube.</div></div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px; margin-bottom:10px;">
+                <div class="icon-circle" style="background:#eff6ff; color:#3b82f6; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-coin"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Monto Accesible</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">¡Inicia tu inversión desde solo $50 MXN!</div></div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px;">
+                <div class="icon-circle" style="background:#eff6ff; color:#3b82f6; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-calendar"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Plazos Definidos</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Ciclos de inversión de 3, 6, 12 o 24 meses.</div></div>
+            </div>
+        </div>
+        <div class="invest-action-bar">
+            <button class="btn-primary ripple-target" style="background:#3b82f6; width:100%; border:none; padding:14px; border-radius:var(--radius-md); font-weight:800; font-size:16px; cursor:pointer;" onclick="showFullScreen('screen-notas-form')">Contratar</button>
+        </div>
+    </div>
+
+    <div id="screen-notas-form" class="full-screen hidden" style="background:var(--bg-app); z-index:85; flex-direction:column;">
+        <div class="status-bar dark"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="background:transparent; border-bottom:none; padding-top:16px;">
+            <span class="back-btn ripple-target" onclick="closeFullScreen('screen-notas-form')" style="position:relative; left:0; top:0;"><i class="ph-bold ph-x"></i></span> 
+        </div>
+        
+        <div style="flex: 1; display:flex; flex-direction:column; padding: 0 24px 30px 24px;">
+            <h2 style="font-size: 26px; font-weight: 900; color: var(--gris-oscuro); margin: 0 0 10px 0; line-height: 1.2;">Configura tu Inversión</h2>
+            <p style="font-size: 15px; color: var(--gris-texto); margin: 0 0 32px 0; line-height: 1.5; font-weight: 400;">Ingresa el monto a invertir y el plazo deseado. Recuerda que puedes iniciar desde $50 MXN.</p>
+            
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px;">
+                <span class="wizard-label">Monto a Invertir MXN</span>
+                <div class="input-container-flex input-container-flex-blue">
+                    <span style="font-size:40px; font-weight:900; color:#3b82f6;">$</span>
+                    <input type="number" id="input-notas-monto" style="flex:1; font-size: 40px; font-weight: 900; color: var(--gris-oscuro); border: none; background: transparent; outline: none; padding: 10px; font-family: 'Outfit';" placeholder="50">
+                    <span style="font-size:20px; font-weight:800; color:var(--gris-texto);">MXN</span>
+                </div>
+
+                <span class="wizard-label">Plazo de Inversión</span>
+                <div class="input-container-flex input-container-flex-blue" style="margin-bottom: 20px;">
+                    <select id="input-notas-plazo" style="flex:1; font-size: 24px; font-weight: 700; color: var(--gris-oscuro); border: none; background: transparent; outline: none; padding: 15px 0; font-family: 'Outfit'; appearance:none;">
+                        <option value="3">3 Meses</option>
+                        <option value="6">6 Meses</option>
+                        <option value="12" selected>12 Meses</option>
+                        <option value="24">24 Meses</option>
+                    </select>
+                    <i class="ph-bold ph-caret-down" style="font-size:24px; color:var(--gris-medio);"></i>
+                </div>
+            </div>
+            
+            <button class="btn-primary ripple-target" style="background:#3b82f6; width:100%; border-radius:30px; font-size:18px; padding:20px; font-weight:800; border:none;" onclick="contratarNotas()">Contratar Ahora</button>
+        </div>
+    </div>
+
+    <div id="screen-inv-pagare" class="full-screen hidden" style="background:var(--bg-app); z-index:70;">
+        <div class="status-bar"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="position:relative; justify-content:center;">
+            <span class="back-btn-pill ripple-target" onclick="closeFullScreen('screen-inv-pagare')"><i class="ph-bold ph-arrow-left"></i> Volver</span>
+            <h1 style="color:#10b981; font-size:20px; margin:0;">Pagaré</h1>
+        </div>
+        <div style="padding: 24px; flex:1;">
+            <div style="background:linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius:16px; padding:20px; margin-bottom:24px; display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; background:#10b981; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="ph-fill ph-piggy-bank" style="font-size:24px; color:white;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:800; color:#065f46; font-size:16px;">Inversión Segura</div>
+                    <div style="font-size:13px; color:#047857; margin-top:3px;">Conoce el rendimiento exacto de tu dinero desde el primer día.</div>
+                </div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px; margin-bottom:10px;">
+                <div class="icon-circle" style="background:#ecfdf5; color:#10b981; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-calendar-check"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Plazos Flexibles</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Elige desde 28 hasta 365 días.</div></div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px; margin-bottom:10px;">
+                <div class="icon-circle" style="background:#ecfdf5; color:#10b981; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-chart-line-up"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Tasa Fija</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Tu tasa se mantiene igual todo el plazo.</div></div>
+                <div class="bold" style="color:#10b981; font-size:22px;">Hasta 11%</div>
+            </div>
+        </div>
+        <div class="invest-action-bar">
+            <button class="btn-outline-red ripple-target" onclick="closeFullScreen('screen-inv-pagare')">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="screen-inv-fondos" class="full-screen hidden" style="background:var(--bg-app); z-index:70;">
+        <div class="status-bar"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="position:relative; justify-content:center;">
+            <span class="back-btn-pill ripple-target" onclick="closeFullScreen('screen-inv-fondos')"><i class="ph-bold ph-arrow-left"></i> Volver</span>
+            <h1 style="color:#f59e0b; font-size:20px; margin:0;">Fondos</h1>
+        </div>
+        <div style="padding: 24px; flex:1;">
+            <div style="background:linear-gradient(135deg, #fffbeb, #fef3c7); border-radius:16px; padding:20px; margin-bottom:24px; display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; background:#f59e0b; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="ph-fill ph-chart-pie-slice" style="font-size:24px; color:white;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:800; color:#78350f; font-size:16px;">Diversificación</div>
+                    <div style="font-size:13px; color:#92400e; margin-top:3px;">Invierte en portafolios manejados por expertos para maximizar ganancias.</div>
+                </div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px; margin-bottom:10px;">
+                <div class="icon-circle" style="background:#fffbeb; color:#f59e0b; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-buildings"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Deuda Corto Plazo</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Ideal para liquidez y bajo riesgo.</div></div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px; margin-bottom:10px;">
+                <div class="icon-circle" style="background:#fffbeb; color:#f59e0b; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-globe"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Renta Variable</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Inversión en empresas nacionales y globales.</div></div>
+            </div>
+            <div class="list-item ripple-target" style="padding:20px;">
+                <div class="icon-circle" style="background:#fffbeb; color:#f59e0b; border:none; box-shadow:none; flex-shrink:0;"><i class="ph-fill ph-leaf"></i></div>
+                <div style="flex:1; margin-left:14px;"><div class="bold" style="font-size:17px;">Fondos ESG</div><div style="color:var(--gris-texto); font-size:13px; margin-top:4px;">Inversiones sostenibles y responsables.</div></div>
+            </div>
+        </div>
+        <div class="invest-action-bar">
+            <button class="btn-outline-red ripple-target" onclick="closeFullScreen('screen-inv-fondos')">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="screen-maya-invest" class="full-screen hidden" style="background: var(--rojo); color:white; z-index:75;">
+        <div class="status-bar dark"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header transparent-hdr flex-between" style="position:relative; justify-content:center;">
+            <span class="back-btn-pill ripple-target" style="background:rgba(255,255,255,0.15); color:white;" onclick="closeFullScreen('screen-maya-invest')"><i class="ph-bold ph-arrow-left"></i> Volver</span>
+            <div class="flex" style="gap:8px;"><i class="ph-fill ph-sparkle" style="color: white;"></i> <span style="font-weight:700; color:white;">Auto-Pilot</span></div>
+        </div>
+        <div style="padding: 20px 24px; text-align:center; flex:1;">
+            <img src="bnn4.png" style="width:200px; height:auto; max-height:200px; margin:20px auto 30px auto; object-fit:contain; display:block;" alt="Maya Presentación">
+            <h2 style="font-size: 28px; font-weight:900; margin:0 0 16px 0;">Inversión Maya</h2>
+            <p style="font-size:15px; opacity:0.9; line-height:1.6; margin-bottom:30px;">
+                La tecnología más avanzada trabajando para ti. Maya analiza el mercado global 24/7 y rebalancea tu portafolio automáticamente para buscar el mejor rendimiento.
+            </p>
+            <div style="background:rgba(255,255,255,0.1); border-radius:16px; padding:20px; text-align:left; border:1px solid rgba(255,255,255,0.2); margin-bottom:40px;">
+                <div class="flex" style="gap:12px; margin-bottom:16px;">
+                    <i class="ph-fill ph-check-circle" style="color:white; font-size:20px;"></i> <span>Análisis de mercado en tiempo real</span>
+                </div>
+                <div class="flex" style="gap:12px; margin-bottom:16px;">
+                    <i class="ph-fill ph-check-circle" style="color:white; font-size:20px;"></i> <span>Rebalanceo automático sin comisiones extras</span>
+                </div>
+                <div class="flex" style="gap:12px;">
+                    <i class="ph-fill ph-check-circle" style="color:white; font-size:20px;"></i> <span>Retiros disponibles 24/7</span>
+                </div>
+            </div>
+            <button class="btn-primary ripple-target" style="background:#8b0000; color:white; font-size:16px; border-radius:30px; font-weight:900;" onclick="openOverlay('modal-riesgo-maya')">Contratar Inversión Maya</button>
+        </div>
+    </div>
+
+    <div id="modal-riesgo-maya" class="overlay hidden" style="justify-content: center; align-items: center; padding: 24px; z-index:110;">
+        <div style="background:var(--blanco); border-radius:20px; padding:32px; text-align:center; width:100%; max-width:320px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <i class="ph-fill ph-warning" style="font-size:50px; color:var(--rojo); margin-bottom:15px; display:block;"></i>
+            <h2 style="margin:0 0 10px 0; font-size:20px; font-weight:900;">Aviso de Riesgo IA</h2>
+            <p style="font-size:14px; color:var(--gris-texto); line-height:1.5;">Maya es una Inteligencia Artificial que predice tendencias, pero <b>puede cometer errores</b>. El rendimiento pasado no garantiza resultados futuros.</p>
+            <div class="flex" style="gap:12px; margin-top:24px;">
+                <button class="btn-primary ripple-target" style="flex:1; background:#e2e8f0; color:var(--gris-oscuro); border-radius:12px;" onclick="closeOverlay('modal-riesgo-maya')">Cancelar</button>
+                <button class="btn-primary ripple-target" style="flex:1; background:var(--rojo); border-radius:12px;" onclick="iniciarWizardMaya()">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-maya-wizard" class="full-screen hidden" style="background:var(--bg-app); flex-direction:column; z-index:80;">
+        <div class="maya-footer-logo"><img src="bnn5.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Maya Logo Pie"></div>
+        <div class="status-bar"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="background:transparent; border-bottom:none; padding-top:16px;">
+            <span class="back-btn ripple-target" onclick="closeFullScreen('screen-maya-wizard')" style="position:relative; left:0; top:0;"><i class="ph-bold ph-x"></i></span> 
+            <div class="progress-dots">
+                <div class="dot active" id="dot-1"></div><div class="dot" id="dot-2"></div>
+                <div class="dot" id="dot-3"></div><div class="dot" id="dot-4"></div>
+            </div>
+        </div>
+        
+        <div id="wizard-container" style="flex: 1; display:flex; flex-direction:column;">
+            
+            <div id="w-step-1" class="wizard-step">
+                <h2 class="wizard-title">¿Cuál es tu experiencia invirtiendo?</h2>
+                <p class="wizard-subtitle">Para armar el plan ideal necesitamos conocerte un poco.</p>
+                <div style="flex:1;">
+                    <div class="option-card" onclick="avanzarPaso(1, 'Estudiante')">
+                        <div class="icon-circle" style="background:#e0f2fe; color:#0284c7; width:50px; height:50px; border:none; box-shadow:none;"><i class="ph-fill ph-student"></i></div>
+                        <div><div class="bold" style="font-size:18px; color:var(--gris-oscuro);">Principiante</div><div style="font-size:14px; color:var(--gris-texto); margin-top:2px;">Busco proteger mis ahorros</div></div>
+                    </div>
+                    <div class="option-card" onclick="avanzarPaso(1, 'Profesional')">
+                        <div class="icon-circle" style="background:#fef3c7; color:#d97706; width:50px; height:50px; border:none; box-shadow:none;"><i class="ph-fill ph-briefcase"></i></div>
+                        <div><div class="bold" style="font-size:18px; color:var(--gris-oscuro);">Intermedia</div><div style="font-size:14px; color:var(--gris-texto); margin-top:2px;">Busco crecer a mediano plazo</div></div>
+                    </div>
+                    <div class="option-card" onclick="avanzarPaso(1, 'Emprendedor')">
+                        <div class="icon-circle" style="background:#fee2e2; color:#dc2626; width:50px; height:50px; border:none; box-shadow:none;"><i class="ph-fill ph-rocket-launch"></i></div>
+                        <div><div class="bold" style="font-size:18px; color:var(--gris-oscuro);">Avanzada</div><div style="font-size:14px; color:var(--gris-texto); margin-top:2px;">Busco el máximo rendimiento</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="w-step-2" class="wizard-step hidden">
+                <h2 class="wizard-title">¿Con cuánto dinero vas a iniciar?</h2>
+                <p class="wizard-subtitle">Este será tu capital de partida para la simulación.</p>
+                <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:60px;">
+                    <span class="wizard-label">Monto a Invertir MXN</span>
+                    <div class="input-container-flex">
+                        <span style="font-size:40px; font-weight:900; color:var(--gris-oscuro);">$</span>
+                        <input type="number" id="input-monto" style="flex:1; font-size: 40px; font-weight: 900; color: var(--gris-oscuro); border: none; background: transparent; outline: none; padding: 10px; font-family: 'Outfit';" placeholder="0">
+                        <span style="font-size:20px; font-weight:800; color:var(--gris-texto);">MXN</span>
+                    </div>
+                </div>
+                <button class="btn-primary ripple-target" style="background:var(--rojo); border-radius:30px; font-size:18px; padding:20px;" onclick="avanzarPaso(2)">Continuar</button>
+            </div>
+
+            <div id="w-step-3" class="wizard-step hidden">
+                <h2 class="wizard-title">Define tu meta</h2>
+                <p class="wizard-subtitle">¿A dónde quieres llegar y en cuánto tiempo?</p>
+                <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px;">
+                    <span class="wizard-label">Meta económica total</span>
+                    <div class="input-container-flex" style="margin-bottom: 20px;">
+                        <span style="font-size:40px; font-weight:900; color:var(--gris-oscuro);">$</span>
+                        <input type="number" id="input-meta" style="flex:1; font-size: 40px; font-weight: 900; color: var(--gris-oscuro); border: none; background: transparent; outline: none; padding: 10px; font-family: 'Outfit';" placeholder="50000">
+                        <span style="font-size:20px; font-weight:800; color:var(--gris-texto);">MXN</span>
+                    </div>
+                    <span class="wizard-label" style="margin-top:10px;">Plazo deseado</span>
+                    <div class="input-container-flex">
+                        <input type="number" id="input-meses" style="flex:1; font-size: 40px; font-weight: 900; color: var(--gris-oscuro); border: none; background: transparent; outline: none; padding: 10px 0; font-family: 'Outfit';" placeholder="12">
+                        <span style="font-size:24px; font-weight:900; color:var(--gris-medio);">Meses</span>
+                    </div>
+                </div>
+                <button class="btn-primary ripple-target" style="background:var(--rojo); border-radius:30px; font-size:18px; padding:20px;" onclick="avanzarPaso(3)">Continuar</button>
+            </div>
+
+            <div id="w-step-4" class="wizard-step hidden">
+                <h2 class="wizard-title">¿Qué nivel de riesgo prefieres?</h2>
+                <p class="wizard-subtitle">Esto ajustará la volatilidad de tu portafolio.</p>
+                <div style="flex:1;">
+                    <div class="option-card" onclick="avanzarPaso(4, 'Bajo')">
+                        <div class="icon-circle" style="background:#ecfdf5; color:#10b981; width:50px; height:50px; border:none; box-shadow:none;"><i class="ph-fill ph-shield-check"></i></div>
+                        <div><div class="bold" style="font-size:18px; color:var(--gris-oscuro);">Bajo</div><div style="font-size:14px; color:var(--gris-texto); margin-top:2px;">Seguro, sin sorpresas</div></div>
+                    </div>
+                    <div class="option-card" onclick="avanzarPaso(4, 'Medio')">
+                        <div class="icon-circle" style="background:#fffbeb; color:#f59e0b; width:50px; height:50px; border:none; box-shadow:none;"><i class="ph-fill ph-scales"></i></div>
+                        <div><div class="bold" style="font-size:18px; color:var(--gris-oscuro);">Medio</div><div style="font-size:14px; color:var(--gris-texto); margin-top:2px;">Balanceado y diversificado</div></div>
+                    </div>
+                    <div class="option-card" onclick="avanzarPaso(4, 'Alto')">
+                        <div class="icon-circle" style="background:#fef2f2; color:#ef4444; width:50px; height:50px; border:none; box-shadow:none;"><i class="ph-fill ph-trend-up"></i></div>
+                        <div><div class="bold" style="font-size:18px; color:var(--gris-oscuro);">Alto</div><div style="font-size:14px; color:var(--gris-texto); margin-top:2px;">Mayor ganancia y volatilidad</div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="w-loading" class="wizard-step hidden" style="justify-content:center; align-items:center;">
+                <img src="bnn6.png" style="width: 160px; height: 160px; object-fit: contain; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(235, 0, 41, 0.4));">
+                <h2 class="wizard-title" style="text-align:center;">Analizando Perfil...</h2>
+                <p class="wizard-subtitle" style="text-align:center;">Maya está diseñando tu estrategia.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-maya-results" class="full-screen hidden" style="background:var(--bg-app); z-index:90;">
+        <div class="maya-footer-logo"><img src="bnn7.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Maya Logo Resultados"></div>
+        <div class="status-bar" style="background:var(--rojo);"><span style="font-size:12px; font-weight:900; color:white;">9:41</span><div class="status-right" style="color:white;"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="background:var(--rojo); border:none; position:relative; justify-content:center;">
+            <span class="back-btn-pill ripple-target" style="background:rgba(255,255,255,0.18); color:white;" onclick="closeFullScreen('screen-maya-results')"><i class="ph-bold ph-x"></i> Cerrar</span>
+            <h1 style="color:white; font-size:20px; margin:0; text-transform:none;">Tu Plan Financiero</h1>
+        </div>
+        <div style="padding:24px;">
+            <div class="card" style="margin:0 0 20px 0; text-align:center;">
+                <div style="font-size:12px; font-weight:800; color:var(--gris-texto); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:8px;">Maya Recomienda:</div>
+                <h2 id="res-producto" style="margin:0 0 4px 0; font-size:26px; color:var(--rojo); font-weight:900;"></h2>
+                <div id="res-tasa" style="font-size:14px; font-weight:600; color:var(--gris-oscuro);"></div>
+            </div>
+            <div class="card" style="margin:0 0 20px 0;">
+                <h3 style="margin:0 0 16px 0; font-size:16px;">Proyección al finalizar tu plazo</h3>
+                <div style="background:var(--gris-claro); border-radius:12px; padding:20px; text-align:center;">
+                    <div style="font-size:13px; color:var(--gris-texto); font-weight:600;">Saldo Estimado</div>
+                    <div id="res-final" style="font-size:36px; font-weight:900; color:var(--gris-oscuro); margin-top:5px;"></div>
+                </div>
+                <div id="res-ajuste"></div>
+            </div>
+            <button class="btn-primary ripple-target" style="background:var(--rojo); width:100%; border-radius:30px; font-size:18px; padding:20px;" onclick="activarPlanMaya()">Activar Plan</button>
+        </div>
+    </div>
+
+    <div id="screen-maya-dashboard-full" class="full-screen hidden" style="background:var(--bg-app); z-index:75;">
+        <div class="status-bar"><span style="font-size:12px; font-weight:900;">9:41</span><div class="status-right"><i class="ph-fill ph-cell-signal-full" style="font-size:14px;"></i><i class="ph-fill ph-wifi-high" style="font-size:14px;"></i><i class="ph-fill ph-battery-full" style="font-size:14px;"></i></div></div>
+        <div class="main-header flex-between" style="background:var(--blanco); border-bottom:1px solid #ddd; position:relative; justify-content:space-between;">
+            <span class="back-btn-pill ripple-target" onclick="closeFullScreen('screen-maya-dashboard-full')"><i class="ph-bold ph-arrow-left"></i> Volver</span>
+            
+            <div style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; height: 100%;">
+                <img src="bnn8.png" style="height: 55px; width: auto; object-fit: contain;" alt="Maya Logo">
+            </div>
+            
+            <div class="icon-circle ripple-target" style="position: absolute; right: 12px; width:36px; height:36px; box-shadow:none; font-size:20px; border:none; background:transparent; cursor:pointer;" onclick="alert('Configuración de Maya abierta')"><i class="ph-bold ph-sliders-horizontal"></i></div>
+        </div>
+        
+        <div style="padding: 20px; flex:1; overflow-y:auto; padding-bottom:100px;">
+            <div class="card stagger-1" style="background: var(--gris-oscuro); color:white; border:none; margin:0 0 20px 0;">
+                <div class="flex-between">
+                    <div>
+                        <div style="font-size:12px; opacity:0.8; text-transform:uppercase; margin-bottom:4px;">Rendimiento Proyectado</div>
+                        <div id="dash-rendimiento" style="font-size:32px; font-weight:900; color:var(--rojo);">+0.0%</div>
+                    </div>
+                    <div class="icon-circle" style="background:rgba(255,255,255,0.1); border:none; box-shadow:none; color:white;"><i class="ph-fill ph-trend-up"></i></div>
+                </div>
+                <div style="margin-top:20px; font-size:14px; opacity:0.9; line-height:1.5; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px;">
+                    "Alejandro, he configurado tu portafolio en <b id="dash-prod"></b>. Haré rebalanceos automáticos si el mercado cambia."
+                </div>
+            </div>
+
+            <div class="stagger-2" style="margin-bottom:24px;">
+                <div class="flex-between" style="margin-bottom:16px;">
+                    <h3 style="margin:0; font-size:18px; font-weight:800; color:var(--gris-oscuro);">Progreso de tu Meta</h3>
+                    <span class="ripple-target" style="color:var(--rojo); font-weight:700; font-size:14px; cursor:pointer;">Editar</span>
+                </div>
+                <div class="card ripple-target" style="margin:0; padding:16px;">
+                    <div class="flex-between" style="margin-bottom:12px;">
+                        <div class="flex" style="gap:12px;">
+                            <div class="icon-circle" style="width:40px; height:40px; background:var(--rojo); color:white; border:none;"><i class="ph-fill ph-target"></i></div>
+                            <div>
+                                <div class="bold" style="font-size:15px;">Objetivo Maya</div>
+                                <div style="font-size:12px; color:var(--gris-texto);">Faltan <span id="dash-faltan"></span></div>
+                            </div>
+                        </div>
+                        <div class="bold" style="font-size:15px; color:var(--gris-oscuro);"><span id="dash-porcentaje">0</span>%</div>
+                    </div>
+                    <div class="progress-bar-bg"><div id="dash-bar" class="progress-fill" style="width:0%;"></div></div>
+                </div>
+            </div>
+
+            <div class="stagger-3" style="margin-bottom:24px;">
+                <h3 style="margin:0 0 12px 0; font-size:18px; font-weight:800; color:var(--gris-oscuro);">Proyección de Crecimiento</h3>
+                <div class="card" style="margin:0; padding:16px;">
+                    <div class="chart-container">
+                        <div class="chart-bar" style="height:20%;"><span>M1</span></div>
+                        <div class="chart-bar" style="height:35%; background:var(--gris-medio);"><span>M3</span></div>
+                        <div class="chart-bar" style="height:50%; background:var(--gris-medio);"><span>M6</span></div>
+                        <div class="chart-bar" style="height:70%; background:var(--gris-medio);"><span>M9</span></div>
+                        <div class="chart-bar" style="height:100%;"><span>M12</span></div>
+                    </div>
+                    <div class="text-center" style="font-size:12px; color:var(--gris-texto); margin-top:10px; text-align:center;">Crecimiento proyectado a <span id="dash-meses">12</span> meses.</div>
+                </div>
+            </div>
+
+            <div class="stagger-4" style="margin-bottom:30px;">
+                <h3 style="margin:0 0 12px 0; font-size:18px; font-weight:800; color:var(--gris-oscuro);">Factores del Mercado</h3>
+                <div class="card" style="margin:0; padding:16px;">
+                    <div class="flex" style="gap:12px; margin-bottom:16px; border-bottom:1px solid #eee; padding-bottom:12px;">
+                        <i class="ph-fill ph-trend-up" style="color:#10b981; font-size:24px;"></i>
+                        <div style="flex:1;">
+                            <div class="bold" style="font-size:14px; color:var(--gris-oscuro);">Tasa Banxico</div>
+                            <div style="font-size:12px; color:var(--gris-texto);">Impacto positivo en tu rendimiento.</div>
+                        </div>
+                    </div>
+                    <div class="flex" style="gap:12px;">
+                        <i class="ph-fill ph-trend-down" style="color:#ef4444; font-size:24px;"></i>
+                        <div style="flex:1;">
+                            <div class="bold" style="font-size:14px; color:var(--gris-oscuro);">Inflación Anual</div>
+                            <div style="font-size:12px; color:var(--gris-texto);">Afecta tu poder adquisitivo real.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stagger-5" style="margin-bottom:30px;">
+                <div class="flex-between" style="margin-bottom:12px;">
+                    <h3 style="margin:0; font-size:18px; font-weight:800; color:var(--gris-oscuro);">Alertas Personalizadas</h3>
+                    <i class="ph-fill ph-gear ripple-target" style="font-size:24px; color:var(--rojo); cursor:pointer;" onclick="alert('Configuración de alertas abierta')"></i>
+                </div>
+                <div class="card" style="margin:0; padding:16px;">
+                    <p style="font-size:13px; color:var(--gris-texto); margin:0 0 16px 0;">Recibe alertas sobre rebalanceos y oportunidades de mercado.</p>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #eee; padding-bottom:12px;">
+                        <div class="flex" style="gap:10px;">
+                            <i class="ph-fill ph-envelope" style="font-size:22px; color:var(--rojo);"></i>
+                            <span style="font-size:14px; font-weight:700; color:var(--gris-oscuro);">Correo Electrónico</span>
+                        </div>
+                        <div style="width:40px; height:22px; background:var(--rojo); border-radius:12px; position:relative; cursor:pointer;">
+                            <div style="width:18px; height:18px; background:white; border-radius:50%; position:absolute; top:2px; right:2px; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #eee; padding-bottom:12px;">
+                        <div class="flex" style="gap:10px;">
+                            <i class="ph-fill ph-device-mobile" style="font-size:22px; color:var(--rojo);"></i>
+                            <span style="font-size:14px; font-weight:700; color:var(--gris-oscuro);">Notificaciones App</span>
+                        </div>
+                        <div style="width:40px; height:22px; background:var(--rojo); border-radius:12px; position:relative; cursor:pointer;">
+                            <div style="width:18px; height:18px; background:white; border-radius:50%; position:absolute; top:2px; right:2px; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="flex" style="gap:10px;">
+                            <i class="ph-fill ph-phone" style="font-size:22px; color:var(--gris-texto);"></i>
+                            <span style="font-size:14px; font-weight:700; color:var(--gris-oscuro);">SMS al Teléfono</span>
+                        </div>
+                        <div style="width:40px; height:22px; background:var(--gris-medio); border-radius:12px; position:relative; cursor:pointer;">
+                            <div style="width:18px; height:18px; background:white; border-radius:50%; position:absolute; top:2px; left:2px; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div> <script>
+    let mayaContratada = false;
+    let datosInversion = { experiencia: '', monto: 0, meta: 0, meses: 0, riesgo: '', productoAsignado: '', tasaAsignada: 0 };
+
+    function handleMayaClick() {
+        if (!mayaContratada) {
+            showFullScreen('screen-maya-invest');
+        } else {
+            showFullScreen('screen-maya-dashboard-full');
+            setTimeout(() => {
+                let porcentaje = Math.round((datosInversion.monto / datosInversion.meta) * 100);
+                if(porcentaje > 100) porcentaje = 100;
+                document.getElementById('dash-bar').style.width = porcentaje + "%";
+            }, 300);
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        let target = e.target.closest('.ripple-target');
+        if (!target) return;
+        let rect = target.getBoundingClientRect();
+        let ripple = document.createElement('span');
+        let diameter = Math.max(rect.width, rect.height);
+        let radius = diameter / 2;
+        ripple.style.width = ripple.style.height = `${diameter}px`;
+        ripple.style.left = `${e.clientX - rect.left - radius}px`;
+        ripple.style.top = `${e.clientY - rect.top - radius}px`;
+        ripple.classList.add('ripple');
+        let existingRipple = target.querySelector('.ripple');
+        if (existingRipple) existingRipple.remove();
+        target.appendChild(ripple);
+    });
+
+    function simulateLoad(targetScreenId, targetTabId) {
+        const currentScreen = document.getElementById('screen-public');
+        currentScreen.classList.add('fade-out');
+        setTimeout(() => {
+            currentScreen.classList.add('hidden');
+            currentScreen.classList.remove('fade-out');
+            const dashboard = document.getElementById('screen-dashboard');
+            dashboard.classList.remove('hidden');
+            dashboard.classList.add('fade-in');
+            if(targetTabId) switchTab(targetTabId);
+            setTimeout(() => { dashboard.classList.remove('fade-in'); }, 400);
+        }, 300); 
+    }
+
+    function switchTab(tabId) {
+        closeOverlay('overlay-menu');
+        closeOverlay('overlay-profile');
+        
+        document.querySelectorAll('.tab-content').forEach(el => {
+            el.classList.add('hidden');
+            el.querySelectorAll('[class*="stagger-"]').forEach(child => child.style.animation = 'none');
+        });
+        
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        const selectedTab = document.getElementById(tabId);
+        if(selectedTab) {
+            selectedTab.classList.remove('hidden');
+            setTimeout(() => { selectedTab.querySelectorAll('[class*="stagger-"]').forEach(child => child.style.animation = ''); }, 10);
+            
+            if(tabId === 'tab-inversiones') {
+                document.getElementById('investment-main-menu').classList.remove('hidden');
+                document.getElementById('risk-selection-in-tab').classList.add('hidden');
+            }
+        }
+        
+        const topBtn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+        if(topBtn) topBtn.classList.add('active');
+    }
+
+    function openOverlay(id) { document.getElementById(id).classList.remove('hidden'); void document.getElementById(id).offsetWidth; document.getElementById(id).classList.add('show'); }
+    function closeOverlay(id) { document.getElementById(id).classList.remove('show'); setTimeout(() => document.getElementById(id).classList.add('hidden'), 300); }
+    function toggleOverlay(id) { const el = document.getElementById(id); if (el.classList.contains('hidden')) openOverlay(id); else closeOverlay(id); }
+    function showFullScreen(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeFullScreen(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function toggleRiskSelection() {
+        const mainMenu = document.getElementById('investment-main-menu');
+        const riskSelection = document.getElementById('risk-selection-in-tab');
+        
+        if (mainMenu.classList.contains('hidden')) {
+            mainMenu.classList.remove('hidden');
+            riskSelection.classList.add('hidden');
+        } else {
+            mainMenu.classList.add('hidden');
+            riskSelection.classList.remove('hidden');
+        }
+    }
+
+    function cerrarSesion() {
+        closeOverlay('overlay-menu');
+        document.querySelectorAll('.full-screen').forEach(el => el.classList.add('hidden'));
+        
+        const dashboard = document.getElementById('screen-dashboard');
+        dashboard.classList.add('fade-out');
+        setTimeout(() => {
+            dashboard.classList.add('hidden');
+            dashboard.classList.remove('fade-out');
+            const publicScreen = document.getElementById('screen-public');
+            publicScreen.classList.remove('hidden');
+            publicScreen.classList.add('fade-in');
+            switchTab('tab-cuentas'); 
+            setTimeout(() => { publicScreen.classList.remove('fade-in'); }, 400);
+        }, 300);
+    }
+
+    function contratarNotas() {
+        let monto = document.getElementById('input-notas-monto').value;
+        if(!monto || monto < 50) {
+            alert("Por favor, ingresa un monto válido (Mínimo $50 MXN).");
+            return;
+        }
+        alert("¡Felicidades! Has contratado exitosamente tus Notas Estructuradas por $" + monto + " MXN.");
+        closeFullScreen('screen-notas-form');
+        closeFullScreen('screen-inv-notas');
+        switchTab('tab-inversiones');
+    }
+
+    function iniciarWizardMaya() {
+        closeOverlay('modal-riesgo-maya');
+        closeFullScreen('screen-maya-invest');
+        
+        document.getElementById('input-monto').value = '';
+        document.getElementById('input-meta').value = '';
+        document.getElementById('input-meses').value = '';
+        
+        mostrarPasoWizard(1);
+        showFullScreen('screen-maya-wizard');
+    }
+
+    function mostrarPasoWizard(step) {
+        document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('hidden'));
+        document.getElementById('w-step-' + step)?.classList.remove('hidden');
+        
+        document.querySelectorAll('.dot').forEach((dot, index) => {
+            if (index < step) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
+    }
+
+    function avanzarPaso(step, valor = null) {
+        if(step === 1) {
+            datosInversion.experiencia = valor;
+            mostrarPasoWizard(2);
+        } 
+        else if(step === 2) {
+            let val = document.getElementById('input-monto').value;
+            if(!val || val <= 0) { alert("Por favor, ingresa un monto válido para continuar."); return; }
+            datosInversion.monto = parseFloat(val);
+            mostrarPasoWizard(3);
+        }
+        else if(step === 3) {
+            let meta = document.getElementById('input-meta').value;
+            let meses = document.getElementById('input-meses').value;
+            if(!meta || !meses || meta <= 0 || meses <= 0) { alert("Por favor, ingresa una meta y un plazo válidos."); return; }
+            datosInversion.meta = parseFloat(meta);
+            datosInversion.meses = parseInt(meses);
+            mostrarPasoWizard(4);
+        }
+        else if(step === 4) {
+            datosInversion.riesgo = valor;
+            document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('hidden'));
+            document.getElementById('w-loading').classList.remove('hidden');
+            
+            setTimeout(() => { procesarPythonLogic(); }, 1800);
+        }
+    }
+
+    function procesarPythonLogic() {
+        let capital = datosInversion.monto;
+        let meta = datosInversion.meta;
+        let meses = datosInversion.meses;
+        let riesgo = datosInversion.riesgo;
+
+        const productos = {
+            "Bajo": { nombre: "Pagaré Banorte", tasa: 0.10, riesgo: "Bajo" },
+            "Medio": { nombre: "Estrategia de Fondos", tasa: 0.13, riesgo: "Medio" },
+            "Alto": { nombre: "Renta Variable", tasa: 0.16, riesgo: "Alto" }
+        };
+
+        let info = productos[riesgo] || productos["Medio"];
+        let tasa_mensual = info.tasa / 12;
+        
+        datosInversion.productoAsignado = info.nombre;
+        datosInversion.tasaAsignada = info.tasa;
+
+        let saldo = capital;
+        for(let i = 1; i <= meses; i++) {
+            let interes_mes = saldo * tasa_mensual;
+            saldo += interes_mes;
+        }
+
+        let final = Math.round(saldo);
+        let htmlAjuste = "";
+
+        if (final >= meta) {
+            htmlAjuste = `
+                <div style="background:#d1fae5; color:#065f46; padding:16px; border-radius:12px; margin-top:16px; text-align:left;">
+                   <i class="ph-fill ph-check-circle" style="font-size:20px; vertical-align:middle; margin-right:5px;"></i> 
+                   <b>¡EXCELENTE NOTICIA!</b><br>Superas tu meta por $${(final - meta).toLocaleString('en-US')}
+                </div>`;
+        } else {
+            let cap_necesario = meta / Math.pow((1 + tasa_mensual), meses);
+            let ajuste_cap = Math.round(cap_necesario - capital);
+
+            let meses_extra = 0;
+            let temp_saldo = final;
+            while(temp_saldo < meta) {
+                temp_saldo += (temp_saldo * tasa_mensual);
+                meses_extra++;
+            }
+
+            htmlAjuste = `
+                <div style="background:#fee2e2; color:#991b1b; padding:16px; border-radius:12px; margin-top:16px; text-align:left; font-size:14px; line-height:1.5;">
+                   <i class="ph-fill ph-warning" style="font-size:20px; vertical-align:middle; margin-right:5px;"></i>
+                   <b>ANÁLISIS DE AJUSTE</b><br>
+                   No llegamos a la meta por $${(meta - final).toLocaleString('en-US')}.<br><br>
+                   Para lograrlo, Maya sugiere dos caminos:<br>
+                   <b>A)</b> Iniciar con $${ajuste_cap.toLocaleString('en-US')} adicionales hoy.<br>
+                   <b>B)</b> Mantener tu inversión ${meses_extra} meses más del plazo original.
+                </div>`;
+        }
+
+        document.getElementById('res-producto').innerText = info.nombre;
+        document.getElementById('res-tasa').innerText = "Rendimiento del " + (info.tasa * 100) + "% anual (Riesgo " + info.riesgo + ")";
+        document.getElementById('res-final').innerText = "$" + final.toLocaleString('en-US');
+        document.getElementById('res-ajuste').innerHTML = htmlAjuste;
+
+        closeFullScreen('screen-maya-wizard');
+        showFullScreen('screen-maya-results');
+    }
+
+    function activarPlanMaya() {
+        mayaContratada = true; 
+        
+        closeFullScreen('screen-maya-results');
+        
+        document.getElementById('maya-floating').classList.remove('hidden');
+        
+        document.getElementById('banner-maya-tag').innerText = "ACTIVO";
+        document.getElementById('banner-maya-icon').classList.remove('glow-icon'); 
+        
+        document.getElementById('dash-rendimiento').innerText = "+" + (datosInversion.tasaAsignada * 100) + "%";
+        document.getElementById('dash-prod').innerText = datosInversion.productoAsignado;
+        document.getElementById('dash-faltan').innerText = "$" + (datosInversion.meta - datosInversion.monto).toLocaleString('en-US');
+        document.getElementById('dash-meses').innerText = datosInversion.meses;
+        
+        let porcentaje = Math.round((datosInversion.monto / datosInversion.meta) * 100);
+        if(porcentaje > 100) porcentaje = 100;
+        document.getElementById('dash-porcentaje').innerText = porcentaje;
+        
+        document.getElementById('dash-bar').style.width = "0%";
+
+        handleMayaClick();
+    }
+</script>
+
+</body>
+</html>
